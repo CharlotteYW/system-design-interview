@@ -16,8 +16,8 @@ When the user names a question (existing slug or new):
    - Data model for hot paths
    - Deep dives and tradeoffs (the interesting bottlenecks)
 3. **Write the four docs:** `README.md`, `FAQ.md`, `FLOW.md` (mermaid), `COMPONENTS.md`.
-4. **Implement locally** with Python 3 + FastAPI + Docker Compose. Mock Redis, Postgres, queues, object storage as needed.
-5. **`scripts/setup.sh`** starts the stack and waits until healthy. **`scripts/run-scenarios.sh`** runs black-box integration scenarios (happy path, failure, one scale/concurrency edge).
+4. **Implement the system** if it does not already run. Follow `05-implement-the-system.mdc`: frontend + backend + database (and other local mocks the design needs). A simpler end-to-end version is OK; docs-only is not.
+5. **`scripts/setup.sh`** starts the stack. **`scripts/run-scenarios.sh`** is integration tests. **`scripts/run-functional.sh`** is functional tests of user-visible flows. All three must pass.
 6. Set README status to **Implemented** and update the root index.
 
 Do not skip FAQ, flowchart, or components. Do not implement before the design docs exist.

@@ -1,0 +1,25 @@
+---
+description: Always implement a runnable full-stack system when preparing a question
+alwaysApply: true
+---
+
+# Implement the system you prepare
+
+Preparing a question is not done at design docs. If the local system does **not** exist (empty `src/`, stub `setup.sh`, or status Stub/Designed), **implement it** in that same pass.
+
+Ship a system the user can start and click through, not only APIs:
+
+- **Frontend** — a real UI (simple HTML/JS is enough; SPA only if it helps)
+- **Backend** — FastAPI (or extra workers if the design needs them)
+- **Database** — Postgres or the store the design actually uses, via Docker Compose
+- Other pieces the design needs (Redis, queue, object store) as local containers
+
+Example: `url-shortener` must include a page to paste/create short links, the API, and a database of mappings — then redirects must work in the browser.
+
+Scripts (must succeed, not print "not implemented"):
+
+- `scripts/setup.sh` — start frontend + backend + data stores and wait until healthy
+- `scripts/run-scenarios.sh` — **integration** tests against the running stack (happy path, failure, one concurrency/edge)
+- `scripts/run-functional.sh` — **functional** tests of user-visible flows (UI and/or HTTP through the real app)
+
+If a full interview feature is too heavy, ship a **simpler version that still works end-to-end**. Document what was cut in the question README. Do not skip frontend, database, integration tests, or functional tests.

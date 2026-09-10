@@ -10,10 +10,12 @@ Default stack: **Python 3 + FastAPI + Docker Compose**.
 - Keep the system small and educational. Implement the core idea, not every feature from the interview.
 - Mock components locally: Postgres, Redis, later Kafka/MinIO/etc. only if the design needs them.
 - No cloud accounts, no paid APIs.
+- Compose must run **frontend + backend + database** (plus Redis/queue/object store when the design needs them).
 - `scripts/setup.sh` must be idempotent: compose up, wait for health, seed if needed.
-- `scripts/run-scenarios.sh` is a black-box integration test against the running stack. Include:
+- `scripts/run-scenarios.sh` — **integration** tests against the running stack:
   - happy path
   - at least one rejection/failure path
   - at least one concurrency, idempotency, or overload edge
-- Exit non-zero on failure. Print what was asserted.
+- `scripts/run-functional.sh` — **functional** tests of user-visible flows (create/read through the UI or the real HTTP API the UI uses).
+- Both test scripts exit non-zero on failure and print what was asserted.
 - Do not commit `.env` secrets, venvs, or `__pycache__`.

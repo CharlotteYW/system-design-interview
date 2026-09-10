@@ -16,7 +16,7 @@ Sources to study from (do not copy write-ups into this repo):
 3. Before that question starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
 4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: interview-style design, then local implementation.
 5. Read that folder's `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`.
-6. Run `./scripts/setup.sh` then `./scripts/run-scenarios.sh` in the question folder once it is **Implemented**.
+6. Run `./scripts/setup.sh`, then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) in the question folder once it is **Implemented**.
 
 ### Status
 
@@ -24,7 +24,7 @@ Sources to study from (do not copy write-ups into this repo):
 | --- | --- |
 | **Stub** | Folder exists; placeholders only. Prompt the question to fill it. |
 | **Designed** | Docs filled; no running system yet. |
-| **Implemented** | Docker stack + setup + scenario scripts work. |
+| **Implemented** | Docker stack (UI + API + DB) + setup + integration + functional tests work. |
 | *(no folder)* | Listed in the index; created when you ask to prepare it. |
 
 ## Folder contract
@@ -38,10 +38,11 @@ Every question lives in `questions/<slug>/`:
 | `FLOW.md` | System flowcharts (mermaid) |
 | `COMPONENTS.md` | Each important piece: definition + functionality |
 | `docker-compose.yml` | Local mocked components |
-| `scripts/setup.sh` | Bring the stack up |
-| `scripts/run-scenarios.sh` | Black-box integration scenarios |
-| `src/` | Application code |
-| `tests/` | Extra tests / scenario helpers |
+| `scripts/setup.sh` | Start frontend, backend, and data stores |
+| `scripts/run-scenarios.sh` | Integration tests against the running stack |
+| `scripts/run-functional.sh` | Functional tests of user-visible flows |
+| `src/` | Backend (and static frontend unless split) |
+| `tests/` | Integration / functional helpers |
 
 New questions: copy [`_templates/question/`](_templates/question/) to `questions/<slug>/` and add a row below.
 
@@ -151,7 +152,7 @@ Tell Cursor the question name. It should:
 1. Copy `_templates/question/` → `questions/<slug>/`
 2. Fill title, sources, and this index
 3. Design (README, FAQ, FLOW, COMPONENTS)
-4. Implement locally and wire `setup.sh` / `run-scenarios.sh`
+4. Implement frontend + backend + database and wire `setup.sh` / `run-scenarios.sh` / `run-functional.sh`
 
 ## Notes
 

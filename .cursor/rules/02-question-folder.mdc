@@ -12,12 +12,13 @@ Every `questions/<slug>/` folder must include:
 - `FAQ.md` — interview Q&A (requirements, design choices, tradeoffs, what the local system taught)
 - `FLOW.md` — mermaid flowchart and/or sequence diagrams for happy path, writes, reads, failure
 - `COMPONENTS.md` — each important piece: definition + role in *this* design
-- `docker-compose.yml` — local mocked components
-- `scripts/setup.sh` — bring the stack up
-- `scripts/run-scenarios.sh` — integration-style scenarios against running containers
-- `src/` — application code
-- `tests/` — scenario helpers or extra tests
+- `docker-compose.yml` — local mocked components (app UI + API, database, extras)
+- `scripts/setup.sh` — bring frontend, backend, and data stores up
+- `scripts/run-scenarios.sh` — integration tests against running containers
+- `scripts/run-functional.sh` — functional tests of user-visible flows
+- `src/` — backend (and static frontend unless `frontend/` is separate)
+- `tests/` — integration/functional helpers
 
-Status in README: **Stub** (placeholders), **Designed** (docs filled, no running system), or **Implemented** (setup + scenarios work).
+Status in README: **Stub** (placeholders), **Designed** (docs filled, no running system), or **Implemented** (setup + integration + functional tests work).
 
 Slug is kebab-case. Overlapping names from Hello Interview and Alex Xu share one folder.

@@ -35,4 +35,4 @@ A: TBD
 ## Local system
 
 **Q: What did the simplified implementation teach you that the diagram did not?**  
-A: TBD (fill after `./scripts/run-scenarios.sh` passes)
+A: TBD (fill after `./scripts/run-scenarios.sh` and `./scripts/run-functional.sh` pass)

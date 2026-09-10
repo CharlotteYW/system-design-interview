@@ -59,7 +59,8 @@ The interesting parts of *this* problem (the ones an interviewer will probe):
 Not implemented yet.
 
 - Setup: `./scripts/setup.sh`
-- Scenarios: `./scripts/run-scenarios.sh`
+- Integration: `./scripts/run-scenarios.sh`
+- Functional: `./scripts/run-functional.sh`
 
 ## Interview checklist
 
