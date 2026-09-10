@@ -7,6 +7,7 @@ alwaysApply: true
 
 When the user names a question (existing slug or new):
 
+0. **Commit first.** Follow `04-commit-before-question.mdc`: previous work must be committed and `git status` must be clean before any new question files are touched.
 1. **Locate or create the folder.** If `questions/<slug>/` is missing, copy `_templates/question/` there, replace `{{QUESTION_TITLE}}`, `{{SOURCES}}`, `{{SLUG}}`, and add a row to the root README index.
 2. **Guide the design in interview order** (collaborate; do not dump a finished answer first):
    - Requirements: functional, non-functional, explicit scale numbers

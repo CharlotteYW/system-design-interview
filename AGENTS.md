@@ -9,9 +9,10 @@ Learn by designing a system in interview style, then implementing a **simplified
 Follow `.cursor/rules/` in order:
 
 1. `00-repo-purpose.mdc` — study by building, original notes only
-2. `01-prepare-a-question.mdc` — interview delivery + implement locally
-3. `02-question-folder.mdc` — required files in `questions/<slug>/`
-4. `03-local-implementation.mdc` — Docker, scripts, integration scenarios
+2. `04-commit-before-question.mdc` — commit previous work; require a clean git tree
+3. `01-prepare-a-question.mdc` — interview delivery + implement locally
+4. `02-question-folder.mdc` — required files in `questions/<slug>/`
+5. `03-local-implementation.mdc` — Docker, scripts, integration scenarios
 
 ## New vs existing questions
 

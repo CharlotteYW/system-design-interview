@@ -1,0 +1,16 @@
+---
+description: Commit previous work and require a clean git tree before starting a question
+alwaysApply: true
+---
+
+# Commit before each question
+
+Before preparing or implementing a question, the git working tree must be **clean**.
+
+1. Run `git status`.
+2. If there are uncommitted changes from previous work, **commit them first** (stage the relevant files, write a message about that prior work, commit). Do not include `.env` or secrets.
+3. Re-run `git status` and continue only when it reports a clean tree.
+4. Do **not** mix the new question's files into that pre-question commit.
+5. If the commit fails (hooks, conflicts), stop and fix. Do not start the new question on a dirty tree.
+
+If status is already clean, skip the commit and start the question.
