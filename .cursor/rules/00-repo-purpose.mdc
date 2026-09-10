@@ -1,0 +1,15 @@
+---
+description: Purpose of this system design interview study repo
+alwaysApply: true
+---
+
+# Repo purpose
+
+This is a personal study repo for software engineer **system design interviews**.
+
+- Goal: understand each concept by **designing then running a simplified local system**, not by memorizing diagrams.
+- One question = one folder under `questions/`.
+- Prefer a working subset that teaches the idea over a complete production clone.
+- Notes must be original. Link to Hello Interview and cite Alex Xu chapters. Never paste copyrighted write-ups.
+- Mock infra with local Docker. No cloud accounts.
+- When the user names a question, prepare that question end-to-end (docs + local implementation) unless they ask for docs only.

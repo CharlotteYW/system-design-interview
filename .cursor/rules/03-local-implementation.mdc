@@ -1,0 +1,19 @@
+---
+description: Local Python/Docker implementation and scenario-test conventions
+alwaysApply: true
+---
+
+# Local implementation
+
+Default stack: **Python 3 + FastAPI + Docker Compose**.
+
+- Keep the system small and educational. Implement the core idea, not every feature from the interview.
+- Mock components locally: Postgres, Redis, later Kafka/MinIO/etc. only if the design needs them.
+- No cloud accounts, no paid APIs.
+- `scripts/setup.sh` must be idempotent: compose up, wait for health, seed if needed.
+- `scripts/run-scenarios.sh` is a black-box integration test against the running stack. Include:
+  - happy path
+  - at least one rejection/failure path
+  - at least one concurrency, idempotency, or overload edge
+- Exit non-zero on failure. Print what was asserted.
+- Do not commit `.env` secrets, venvs, or `__pycache__`.
