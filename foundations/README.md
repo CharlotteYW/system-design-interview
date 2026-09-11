@@ -6,12 +6,22 @@ Read the sources, then practice explaining each item in your own words. When a l
 
 ## Interview delivery
 
+Practice every question in this order (see `.cursor/rules/06-interview-pattern.mdc`):
+
+1. Requirements and design scope
+2. High-level design
+3. Low-level design and deep dive
+4. Component questions and special situations (10x traffic, rush hour)
+5. Summary and future improvements
+
+Then **implement a simplified local system**.
+
+Source reading:
+
 - [ ] [Hello Interview: Introduction](https://www.hellointerview.com/learn/system-design/in-a-hurry/introduction) — what interviewers assess
 - [ ] [Hello Interview: How to prepare](https://www.hellointerview.com/learn/system-design/in-a-hurry/how-to-prepare)
-- [ ] [Hello Interview: Delivery framework](https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery) — requirements → APIs → high-level design → deep dives
+- [ ] [Hello Interview: Delivery framework](https://www.hellointerview.com/learn/system-design/in-a-hurry/delivery)
 - [ ] Alex Xu, *System Design Interview* Vol 1, Ch 3 — 4-step framework
-
-In this repo we follow that order, then **implement a simplified local system**.
 
 ## Scale and estimation
 

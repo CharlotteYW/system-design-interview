@@ -1,0 +1,16 @@
+---
+description: Five-step system design interview pattern for every question
+alwaysApply: true
+---
+
+# Interview pattern
+
+When practicing **any** question, walk through these steps in order. Collaborate; do not dump a finished answer. Map them into `README.md` and `FAQ.md`.
+
+1. **Requirements and design scope.** Restate the problem. Gather functional and non-functional requirements. Put scale numbers on QPS, storage, latency. Say what is in and out of scope.
+2. **High-level design.** Sketch the end-to-end system (clients, APIs, services, stores). Get buy-in before diving. Details in `FLOW.md` and `COMPONENTS.md`.
+3. **Low-level design and deep dive.** Data model, core algorithms, the 1–3 bottlenecks an interviewer will probe, and tradeoffs.
+4. **Component and special-situation questions.** Probe individual components (failure, consistency, APIs). Then scale shocks: 10x traffic, rush hour, hot keys, region loss.
+5. **Summary and future improvements.** Recap the design, call out risks, and name what you would add with more time.
+
+Do not skip a step. Do not jump to implementation before steps 1–3 are written. Step 4 belongs in FAQ as well as README.

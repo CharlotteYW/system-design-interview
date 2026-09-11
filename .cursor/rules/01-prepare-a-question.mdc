@@ -9,13 +9,13 @@ When the user names a question (existing slug or new):
 
 0. **Commit first.** Follow `04-commit-before-question.mdc`: previous work must be committed and `git status` must be clean before any new question files are touched.
 1. **Locate or create the folder.** If `questions/<slug>/` is missing, copy `_templates/question/` there, replace `{{QUESTION_TITLE}}`, `{{SOURCES}}`, `{{SLUG}}`, and add a row to the root README index.
-2. **Guide the design in interview order** (collaborate; do not dump a finished answer first):
-   - Requirements: functional, non-functional, explicit scale numbers
-   - Core entities and 4–5 APIs
-   - High-level design that actually works end-to-end
-   - Data model for hot paths
-   - Deep dives and tradeoffs (the interesting bottlenecks)
-3. **Write the four docs:** `README.md`, `FAQ.md`, `FLOW.md` (mermaid), `COMPONENTS.md`.
+2. **Guide the design** using `06-interview-pattern.mdc` (collaborate; do not dump a finished answer):
+   1. Requirements and design scope
+   2. High-level design
+   3. Low-level design and deep dive
+   4. Component questions and special situations (traffic spikes, rush hour)
+   5. Summary and future improvements
+3. **Write the four docs** in that same five-step shape: `README.md`, `FAQ.md`, `FLOW.md` (mermaid), `COMPONENTS.md`.
 4. **Implement the system** if it does not already run. Follow `05-implement-the-system.mdc`: frontend + backend + database (and other local mocks the design needs). A simpler end-to-end version is OK; docs-only is not.
 5. **`scripts/setup.sh`** starts the stack. **`scripts/run-scenarios.sh`** is integration tests. **`scripts/run-functional.sh`** is functional tests of user-visible flows. All three must pass.
 6. Set README status to **Implemented** and update the root index.

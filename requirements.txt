@@ -1,0 +1,3 @@
+# Host-side test client for question scripts. Service code runs in Docker.
+httpx>=0.27
+pytest>=8

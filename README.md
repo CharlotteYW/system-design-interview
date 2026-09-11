@@ -2,7 +2,7 @@
 
 Personal study repo for **software engineer system design interviews**.
 
-The loop is: pick a question → design it the way you would in a 45-minute interview → implement a **simplified local system** (Python + FastAPI + Docker) → run setup and scenario scripts until the idea is concrete.
+The loop is: pick a question → walk the **five-step interview pattern** (scope → high-level → deep dive → special situations → summary) → implement a **simplified local system** (Python + FastAPI + Docker) → run setup and tests until the idea is concrete.
 
 Sources to study from (do not copy write-ups into this repo):
 
@@ -14,9 +14,9 @@ Sources to study from (do not copy write-ups into this repo):
 1. Skim [foundations](foundations/README.md) once so the vocabulary is in place.
 2. In Cursor, prompt a question by name (`rate limiter`, `design Uber`, `url-shortener`, or a new one).
 3. Before that question starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
-4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: interview-style design, then local implementation.
+4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: five-step interview design, then local implementation.
 5. Read that folder's `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`.
-6. Run `./scripts/setup.sh`, then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) in the question folder once it is **Implemented**.
+6. Run `./scripts/setup.sh` (creates/activates the `system-design-interview` venv, then starts Docker), then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) once it is **Implemented**.
 
 ### Status
 
@@ -33,18 +33,22 @@ Every question lives in `questions/<slug>/`:
 
 | File | Role |
 | --- | --- |
-| `README.md` | Problem, requirements, APIs, design, how to run |
-| `FAQ.md` | Interview questions to practice out loud |
+| `README.md` | Five interview steps + how to run |
+| `FAQ.md` | Q&A in the same five steps |
 | `FLOW.md` | System flowcharts (mermaid) |
 | `COMPONENTS.md` | Each important piece: definition + functionality |
 | `docker-compose.yml` | Local mocked components |
-| `scripts/setup.sh` | Start frontend, backend, and data stores |
+| `scripts/setup.sh` | Activate repo venv, then start frontend, backend, and data stores |
 | `scripts/run-scenarios.sh` | Integration tests against the running stack |
 | `scripts/run-functional.sh` | Functional tests of user-visible flows |
 | `src/` | Backend (and static frontend unless split) |
 | `tests/` | Integration / functional helpers |
 
 New questions: copy [`_templates/question/`](_templates/question/) to `questions/<slug>/` and add a row below.
+
+## Python environment
+
+One host venv for the whole repo: prompt **`system-design-interview`**, directory **`.venv/`** (gitignored). Question `setup.sh` / test scripts create and activate it via [`scripts/use-venv.sh`](scripts/use-venv.sh). App processes still run in Docker. Manual activate: `source .venv/bin/activate`.
 
 ## Starter path (folders exist)
 

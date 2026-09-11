@@ -1,0 +1,13 @@
+---
+description: Use the repo-local system-design-interview Python venv in every question script
+alwaysApply: true
+---
+
+# Repo Python venv
+
+This repo has **one** host virtualenv: prompt name `system-design-interview`, directory `.venv/` at the repo root. Do not use system Python. Do not create a venv per question.
+
+- `scripts/setup.sh`, `scripts/run-scenarios.sh`, and `scripts/run-functional.sh` must `source` [`scripts/use-venv.sh`](scripts/use-venv.sh) after setting `REPO_ROOT` (and `QUESTION_DIR`).
+- `use-venv.sh` creates `.venv` if missing, activates it, and installs root `requirements.txt` (plus the question's `requirements.txt` if present).
+- Host tests and helper scripts run in this venv. App processes still run in Docker Compose.
+- Never commit `.venv/`. Never `pip install` into the system interpreter.
