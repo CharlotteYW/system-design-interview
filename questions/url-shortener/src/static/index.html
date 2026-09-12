@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>URL shortener</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        line-height: 1.4;
+      }
+      input[type="url"] {
+        width: 100%;
+        padding: 0.5rem;
+        font: inherit;
+      }
+      button {
+        margin-top: 0.75rem;
+        padding: 0.5rem 1rem;
+        font: inherit;
+        cursor: pointer;
+      }
+      .result {
+        margin-top: 1.25rem;
+      }
+      .error {
+        color: #b00020;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>URL shortener</h1>
+    <p>Paste a long URL. You get a short link that 302-redirects to it.</p>
+    <form id="form">
+      <label>
+        Long URL
+        <input
+          id="url"
+          name="url"
+          type="url"
+          required
+          placeholder="https://example.com/very/long/path"
+        />
+      </label>
+      <button type="submit">Shorten</button>
+    </form>
+    <div class="result" id="result" hidden>
+      Short link:
+      <a id="short" href="#"></a>
+    </div>
+    <p class="error" id="error" hidden></p>
+    <script>
+      const form = document.getElementById("form");
+      const result = document.getElementById("result");
+      const short = document.getElementById("short");
+      const error = document.getElementById("error");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.hidden = true;
+        error.hidden = true;
+        const url = document.getElementById("url").value;
+        try {
+          const response = await fetch("/api/shorten", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          const body = await response.json();
+          if (!response.ok) {
+            error.textContent = body.detail || "Could not shorten that URL.";
+            error.hidden = false;
+            return;
+          }
+          short.href = body.short_url;
+          short.textContent = body.short_url;
+          result.hidden = false;
+        } catch (err) {
+          error.textContent = String(err);
+          error.hidden = false;
+        }
+      });
+    </script>
+  </body>
+</html>

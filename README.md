@@ -52,11 +52,11 @@ One host venv for the whole repo: prompt **`system-design-interview`**, director
 
 ## Starter path (folders exist)
 
-Recommended order. All of these are **Stub** until you prompt them.
+Recommended order. Prompt a question to fill a stub. URL shortener is **Implemented**.
 
 | # | Question | Folder | Sources |
 | --- | --- | --- | --- |
-| 1 | URL shortener (Bitly) | [questions/url-shortener](questions/url-shortener/) | Hello Interview · Alex Xu Vol 1 Ch 8 |
+| 1 | URL shortener (Bitly) | [questions/url-shortener](questions/url-shortener/) | Hello Interview · Alex Xu Vol 1 Ch 8 · **Implemented** |
 | 2 | Rate limiter | [questions/rate-limiter](questions/rate-limiter/) | Hello Interview · Alex Xu Vol 1 Ch 4 |
 | 3 | Unique ID generator | [questions/unique-id-generator](questions/unique-id-generator/) | Alex Xu Vol 1 Ch 7 |
 | 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 |
@@ -77,7 +77,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 
 | Question | Difficulty | Status | Notes |
 | --- | --- | --- | --- |
-| Bitly | Easy | [Stub](questions/url-shortener/) | Same as URL shortener |
+| Bitly | Easy | [Implemented](questions/url-shortener/) | Same as URL shortener |
 | Dropbox | Easy | listed | Related to Google Drive (Vol 1 Ch 15) |
 | Yelp | Easy | listed | Related to Proximity Service (Vol 2) |
 | Local Delivery Service | Easy | listed | |
@@ -122,7 +122,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 5 | Consistent hashing | listed |
 | 6 | Key-value store | [Stub](questions/key-value-store/) |
 | 7 | Unique ID generator | [Stub](questions/unique-id-generator/) |
-| 8 | URL shortener | [Stub](questions/url-shortener/) |
+| 8 | URL shortener | [Implemented](questions/url-shortener/) |
 | 9 | Web crawler | [Stub](questions/web-crawler/) |
 | 10 | Notification system | [Stub](questions/notification-system/) |
 | 11 | News feed | [Stub](questions/news-feed/) |

@@ -23,8 +23,9 @@ source "${SDI_VENV}/bin/activate"
 
 python -m pip install --upgrade pip >/dev/null
 python -m pip install -r "${REPO_ROOT}/requirements.txt" >/dev/null
-if [[ -n "${QUESTION_DIR:-}" && -f "${QUESTION_DIR}/requirements.txt" ]]; then
-  python -m pip install -r "${QUESTION_DIR}/requirements.txt" >/dev/null
+# Host-only extras for this question (tests). Do not point this at the Docker app requirements.txt.
+if [[ -n "${QUESTION_DIR:-}" && -f "${QUESTION_DIR}/requirements-host.txt" ]]; then
+  python -m pip install -r "${QUESTION_DIR}/requirements-host.txt" >/dev/null
 fi
 
 echo "Using ${SDI_VENV_NAME} venv: $(command -v python) ($(python --version 2>&1))"

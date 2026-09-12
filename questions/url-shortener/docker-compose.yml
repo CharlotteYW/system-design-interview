@@ -1,7 +1,3 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
-
 services:
   app:
     build: .
@@ -10,12 +6,23 @@ services:
     environment:
       DATABASE_URL: postgresql://app:app@postgres:5432/app
       REDIS_URL: redis://redis:6379/0
+      PUBLIC_BASE_URL: http://localhost:8000
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-    # profiles: ["not-implemented"]
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   postgres:
     image: postgres:16-alpine
@@ -23,16 +30,21 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
+    volumes:
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s
       timeout: 5s
       retries: 5
-    # profiles: ["not-implemented"]
 
   redis:
     image: redis:7-alpine
-    # profiles: ["not-implemented"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-# volumes:
-#   pgdata:
+volumes:
+  pgdata:
