@@ -1,0 +1,29 @@
+---
+description: After each interview answer, teach options, tradeoffs, and why we chose this
+alwaysApply: true
+---
+
+# Teach after every answer
+
+The user answers first (requirements, high-level, low-level, component/special situations). **Do not advance** until you have taught that step.
+
+For **each** of their replies, write a teacher response that is long enough to learn from. Never a one-liner verdict.
+
+## Required shape
+
+1. **Analyze their answer.** What is correct, what is incomplete, what an interviewer would probe.
+2. **Full story.** What is actually happening in the system at this step (data path, who owns state, what fails).
+3. **Options.** At least two real alternatives (including “do nothing / keep it simple”).
+4. **Tradeoffs.** For each option: pros, cons, when it wins (QPS, latency, cost, complexity, consistency).
+5. **Choice and basis.** Which option we take for *this* interview and *this* local system, and the numbers/constraints that justify it.
+6. **What to do next operationally** if they named a lever (e.g. cache): how to apply it, what to add after, what not to do.
+
+## Bad vs good
+
+Bad: “10× redirects. L1 + Redis is the right lever. Extra app servers without a cache still stampede Postgres.”
+
+Good: analyze their cache idea; explain stampede vs connection pressure; compare (scale app only) vs (Redis) vs (L1+L2) vs (CDN 302) vs (read replicas); pick L1+Redis for this design because redirects are read-heavy and a few keys dominate; say what to do after cache (then scale app); say we skip CDN/replicas in the local build.
+
+Apply this to **all four design steps**. Stay original; cite Hello Interview / Alex Xu, do not paste them.
+
+After implementation and passing tests, close the question with a **what we implemented** summary (chat + README): processes, stores, what was cut, how to run, what tests prove.

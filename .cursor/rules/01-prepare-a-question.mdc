@@ -9,15 +9,15 @@ When the user names a question (existing slug or new):
 
 0. **Commit first.** Follow `04-commit-before-question.mdc`: previous work must be committed and `git status` must be clean before any new question files are touched.
 1. **Locate or create the folder.** If `questions/<slug>/` is missing, copy `_templates/question/` there, replace `{{QUESTION_TITLE}}`, `{{SOURCES}}`, `{{SLUG}}`, and add a row to the root README index.
-2. **Guide the design** using `06-interview-pattern.mdc` (collaborate; do not dump a finished answer):
+2. **Guide the design** using `06-interview-pattern.mdc`. The user answers each step. After **each** of their answers, follow `08-teach-after-each-answer.mdc` before moving on:
    1. Requirements and design scope
    2. High-level design
    3. Low-level design and deep dive
    4. Component questions and special situations (traffic spikes, rush hour)
    5. Summary and future improvements
-3. **Write the four docs** in that same five-step shape: `README.md`, `FAQ.md`, `FLOW.md` (mermaid), `COMPONENTS.md`.
+3. **Write the four docs** in that same five-step shape: `README.md`, `FAQ.md`, `FLOW.md` (mermaid), `COMPONENTS.md`. Include options/tradeoffs taught in the session, not only the chosen design.
 4. **Implement the system** if it does not already run. Follow `05-implement-the-system.mdc`: frontend + backend + database (and other local mocks the design needs). A simpler end-to-end version is OK; docs-only is not.
 5. **`scripts/setup.sh`** starts the stack. **`scripts/run-scenarios.sh`** is integration tests. **`scripts/run-functional.sh`** is functional tests of user-visible flows. All three must pass.
-6. Set README status to **Implemented** and update the root index.
+6. Set README status to **Implemented**, add a **What we implemented** section (what runs, what was cut, how to run, what tests prove), update the root index, and repeat that summary in chat as the close of the question.
 
 Do not skip FAQ, flowchart, or components. Do not implement before the design docs exist.

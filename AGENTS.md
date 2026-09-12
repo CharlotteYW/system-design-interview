@@ -11,11 +11,12 @@ Follow `.cursor/rules/` in order:
 1. `00-repo-purpose.mdc` — study by building, original notes only
 2. `04-commit-before-question.mdc` — commit previous work; require a clean git tree
 3. `06-interview-pattern.mdc` — five steps: scope, high-level, deep dive, special situations, summary
-4. `01-prepare-a-question.mdc` — interview delivery + implement locally
-5. `02-question-folder.mdc` — required files in `questions/<slug>/`
-6. `03-local-implementation.mdc` — Docker, scripts, integration and functional tests
-7. `05-implement-the-system.mdc` — if the system does not exist, build frontend + backend + database and make the scripts pass
-8. `07-python-venv.mdc` — one host venv (`.venv`, prompt `system-design-interview`); all question scripts must use it
+4. `08-teach-after-each-answer.mdc` — after each user answer: analyze, options, tradeoffs, why we chose this; then implementation wrap-up
+5. `01-prepare-a-question.mdc` — interview delivery + implement locally
+6. `02-question-folder.mdc` — required files in `questions/<slug>/`
+7. `03-local-implementation.mdc` — Docker, scripts, integration and functional tests
+8. `05-implement-the-system.mdc` — if the system does not exist, build frontend + backend + database and make the scripts pass
+9. `07-python-venv.mdc` — one host venv (`.venv`, prompt `system-design-interview`); all question scripts must use it
 
 ## New vs existing questions
 
@@ -28,4 +29,5 @@ Follow `.cursor/rules/` in order:
 - Spin up cloud accounts. Mock components with local Docker.
 - Skip FAQ, FLOW, or COMPONENTS. Every question folder needs all three plus README.
 - Stop at design docs. If the local system is missing, implement it (UI + API + database + tests).
+- Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`).
 - Use system Python or a per-question venv. Host scripts use `.venv` (`system-design-interview`).

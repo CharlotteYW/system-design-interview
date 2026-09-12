@@ -8,7 +8,7 @@ alwaysApply: false
 
 Every `questions/<slug>/` folder must include:
 
-- `README.md` — five interview steps (scope, high-level, deep dive, special situations, summary) plus how to run locally
+- `README.md` — five interview steps plus **What we implemented**; include options/tradeoffs taught in the session, not only the chosen path
 - `FAQ.md` — Q&A in the same five steps, including component and rush-hour probes
 - `FLOW.md` — mermaid flowchart and/or sequence diagrams for happy path, writes, reads, failure
 - `COMPONENTS.md` — each important piece: definition + role in *this* design

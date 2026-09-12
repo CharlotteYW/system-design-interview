@@ -105,6 +105,14 @@ links (
 - **Risks left on the table:** no analytics, no TTL, single region, hash cannot give two aliases for one URL.
 - **With more time:** custom aliases, click counts, CDN for ultra-hot 302s, ID-generation codes.
 
+## 6. What we implemented
+
+- **Runs:** HTML UI on port 8000, FastAPI, Postgres (`links` table), Redis plus a small in-process L1 cache. Creates use hash+rehash codes; redirects are 302.
+- **Matches the design:** idempotent create, cache-aside reads, 503 if Postgres is down on create or on redirect miss.
+- **Cut:** CDN, sharding, custom aliases, analytics, 301, multi-region.
+- **How to run:** `cd questions/url-shortener && ./scripts/setup.sh && ./scripts/run-scenarios.sh && ./scripts/run-functional.sh` then open http://localhost:8000. Stop with `docker compose down`.
+- **Tests prove:** health, create+redirect, invalid URL, unknown code 404, same URL same code, concurrent same URL, UI HTML served.
+
 ## Local implementation
 
 Simplified but working: UI + FastAPI + Postgres + Redis.
@@ -131,4 +139,5 @@ Open http://localhost:8000 — paste a URL, click the short link, confirm redire
 - [x] 3. Low-level / deep dive with tradeoffs
 - [x] 4. Component probes and special situations (traffic, rush hour)
 - [x] 5. Summary and future improvements
+- [x] 6. What we implemented (after tests)
 - [ ] FAQ practiced out loud

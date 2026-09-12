@@ -8,6 +8,7 @@ alwaysApply: true
 This is a personal study repo for software engineer **system design interviews**.
 
 - Goal: understand each concept by **designing then running a simplified local system**, not by memorizing diagrams.
+- After each of the user's design answers, **teach**: analyze their reply, other options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). One-line verdicts are not enough.
 - One question = one folder under `questions/`.
 - Prefer a working subset that teaches the idea over a complete production clone.
 - Notes must be original. Link to Hello Interview and cite Alex Xu chapters. Never paste copyrighted write-ups.
