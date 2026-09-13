@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 import pytest
@@ -26,7 +27,7 @@ def test_shorten_and_redirect(client: httpx.Client) -> None:
     assert created.status_code == 200, created.text
     body = created.json()
     code = body["code"]
-    assert len(code) == 7
+    assert len(code) == 11
     assert body["short_url"].endswith(f"/{code}")
 
     redirected = client.get(f"/{code}")
@@ -40,25 +41,30 @@ def test_invalid_url_rejected(client: httpx.Client) -> None:
 
 
 def test_unknown_code_is_404(client: httpx.Client) -> None:
-    response = client.get("/zzzzzzz")
+    response = client.get("/zzzzzzzzzzz")
     assert response.status_code == 404
 
 
-def test_same_url_is_idempotent(client: httpx.Client) -> None:
-    long_url = "https://example.com/integration/idempotent"
+def test_same_url_gets_new_code(client: httpx.Client) -> None:
+    long_url = "https://example.com/integration/new-code-each-post"
     first = client.post("/api/shorten", json={"url": long_url})
     second = client.post("/api/shorten", json={"url": long_url})
     assert first.status_code == 200
     assert second.status_code == 200
-    assert first.json()["code"] == second.json()["code"]
+    assert first.json()["code"] != second.json()["code"]
+    assert len(first.json()["code"]) == 11
+    assert len(second.json()["code"]) == 11
 
 
-def test_concurrent_same_url(client: httpx.Client) -> None:
-    long_url = "https://example.com/integration/concurrent"
+def test_concurrent_same_url_gets_distinct_codes(client: httpx.Client) -> None:
+    long_url = "https://example.com/integration/concurrent-distinct"
     with httpx.Client(base_url=BASE_URL, timeout=10.0) as extra:
-        responses = []
-        for _ in range(8):
-            responses.append(extra.post("/api/shorten", json={"url": long_url}))
-        codes = {item.json()["code"] for item in responses if item.status_code == 200}
+
+        def post() -> httpx.Response:
+            return extra.post("/api/shorten", json={"url": long_url})
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            responses = list(pool.map(lambda _: post(), range(8)))
         assert all(item.status_code == 200 for item in responses)
-        assert len(codes) == 1
+        codes = {item.json()["code"] for item in responses}
+        assert len(codes) == 8

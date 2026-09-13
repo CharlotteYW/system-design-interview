@@ -25,7 +25,12 @@ def test_ui_create_then_follow_short_link() -> None:
         assert created.status_code == 200, created.text
         code = created.json()["code"]
         short_url = created.json()["short_url"]
+        assert len(code) == 11
         redirected = client.get(f"/{code}")
         assert redirected.status_code == 302
         assert redirected.headers["location"] == long_url
         assert short_url.endswith(f"/{code}")
+
+        again = client.post("/api/shorten", json={"url": long_url})
+        assert again.status_code == 200, again.text
+        assert again.json()["code"] != code

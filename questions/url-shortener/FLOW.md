@@ -27,16 +27,12 @@ sequenceDiagram
   participant D as Postgres
   C->>S: POST /api/shorten url
   S->>S: validate http(s) URL
-  S->>D: select by url
-  alt already exists
-    D-->>S: existing code
-  else new
-    S->>S: code = base62(sha256(salt:url))[:7]
-    S->>D: insert code, url
-    alt code collision
-      S->>S: salt += 1 and retry
-    end
+  S->>S: next snowflake id, code = base62(id)  -- ~11 chars if lossless
+  S->>D: insert code, url
+  alt code collision
+    S->>S: next id and retry
   end
+  S->>S: write-through L1 and Redis (ignore Redis errors)
   S-->>C: 200 code plus short_url
 ```
 
@@ -53,27 +49,33 @@ sequenceDiagram
   S->>L1: get
   alt L1 hit
     L1-->>S: url
+    S-->>C: 302 Location url
   else L1 miss
     S->>R: get
     alt Redis hit
       R-->>S: url
       S->>L1: set
+      S-->>C: 302 Location url
     else Redis miss
+      S->>S: singleflight load by code
       S->>D: select by code
-      alt found
+      alt postgres down
+        D-->>S: error
+        S-->>C: 503
+      else found
         D-->>S: url
         S->>R: set
         S->>L1: set
+        S-->>C: 302 Location url
       else missing
         S-->>C: 404
       end
     end
   end
-  S-->>C: 302 Location url
 ```
 
 ## Failure / overload path
 
-- Postgres down: create → 503; redirect cache hit → 302; redirect cache miss → 503.
-- Redis down: create unchanged; redirect uses Postgres.
-- Hot key / 10× redirects: serve from L1/Redis; one DB fill on miss.
+- Postgres down: create → 503; redirect cache hit → 302; redirect cache miss → **503** (not 404).
+- Redis down: create still 200 if Postgres is up (write-through skipped); redirect uses L1 then Postgres.
+- Hot key / 10× redirects: serve from L1/Redis; **one DB fill per code** via singleflight on miss.
