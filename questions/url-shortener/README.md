@@ -135,7 +135,7 @@ Re-practice (2026-09-13) replaced the hash/idempotent local app.
 - **Runs:** HTML UI on port 8000, FastAPI, Postgres (`links`: `code` PK, `url` not unique, `created_at` / `updated_at` / `expires_at`), Redis plus in-process L1 LRU. Creates mint Snowflake → 11-char base62; redirects are 302. Singleflight coalesces concurrent DB loads of the same `code`. Redis errors are ignored on write-through so create still succeeds.
 - **Matches the design:** new code every POST; uniqueness on `code` only; cache-aside L1→Redis→PG; 503 if Postgres is down on create or on redirect miss (404 only when PG said “no row”); 302 not 301.
 - **Cut:** CDN, sharding, custom aliases, analytics, TTL enforcement, Redis cluster, PG replicas, cross-process Redis lock, extra redirect rate-limiting when Redis is down.
-- **How to run:** `cd questions/url-shortener && ./scripts/setup.sh && ./scripts/run-scenarios.sh && ./scripts/run-functional.sh` then open http://localhost:8000. Stop with `docker compose down`.
+- **How to run:** `cd questions/url-shortener && ./scripts/setup.sh && ./scripts/run-scenarios.sh && ./scripts/run-functional.sh` then open http://localhost:8000. Stop with `./scripts/stop.sh`.
 - **Tests prove:** health, create+redirect with 11-char codes, invalid URL, unknown code 404, same URL → **different** codes, concurrent same URL → **distinct** codes, UI HTML served.
 - **Session questions:** 2026-09-13 — singleflight + hot key; 7 vs 11 char codes vs Bitly/Hello Interview; where in `src/main.py` the generator, INSERT, singleflight, L1, and Redis live (see `FAQ.md`). No further questions; session closed.
 
@@ -150,6 +150,7 @@ cd questions/url-shortener
 ./scripts/setup.sh
 ./scripts/run-scenarios.sh
 ./scripts/run-functional.sh
+./scripts/stop.sh
 ```
 
 Open http://localhost:8000 — paste a URL, click the short link, confirm redirect.
@@ -157,6 +158,7 @@ Open http://localhost:8000 — paste a URL, click the short link, confirm redire
 - Setup: `./scripts/setup.sh`
 - Integration: `./scripts/run-scenarios.sh`
 - Functional: `./scripts/run-functional.sh`
+- Stop: `./scripts/stop.sh`
 
 ## Interview checklist
 
@@ -167,4 +169,5 @@ Open http://localhost:8000 — paste a URL, click the short link, confirm redire
 - [x] 5. Summary and future improvements
 - [x] 6. What we implemented (after tests)
 - [x] 7. User questions at the end, recorded in FAQ/README
+- [x] 8. Stack stopped with `./scripts/stop.sh`
 - [ ] FAQ practiced out loud

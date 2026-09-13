@@ -1,0 +1,35 @@
+---
+description: Stop the local question stack when a practice session ends
+alwaysApply: true
+---
+
+# Stop the service when a question session ends
+
+A question session **ends** when the user has no more questions (or says they are done) after the implementation summary / Q&A (`10-end-of-session-questions.mdc`). Do not leave Docker from that question running.
+
+## Required script
+
+Every `questions/<slug>/` folder must have `scripts/stop.sh` that:
+
+- `cd`s to the question directory
+- runs `docker compose down` (no `-v`; keep named volumes unless the user asks to wipe data)
+- is idempotent (succeeds if nothing is running)
+- does **not** print "not implemented"
+
+Create it in the same pass if it is missing (copy from `_templates/question/scripts/stop.sh`).
+
+## When to run it
+
+1. Record the last Q&A (or that they had none).
+2. Run `questions/<slug>/scripts/stop.sh` in that same turn.
+3. Tell the user the stack is down and how to start it again (`./scripts/setup.sh`).
+
+Do not wait for them to ask to stop. Do not skip this because the session already committed. Do not `docker compose down -v` unless they want data gone.
+
+```bash
+# ✅ GOOD — session closed
+./scripts/stop.sh
+
+# ❌ BAD — leave compose up after "we're done"
+# ❌ BAD — only tell them to run `docker compose down` by hand
+```

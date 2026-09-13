@@ -21,5 +21,6 @@ When the user names a question (existing slug or new):
 6. Set README status to **Implemented**, add a **What we implemented** section (what runs, what was cut, how to run, what tests prove), update the root index, and repeat that summary in chat as the close of the question.
 7. **Re-practice:** if this question was already filled in, follow `09-update-on-repractice.mdc` — revise docs and code so the folder matches *this* conversation, then re-run tests if code changed.
 8. **Invite questions.** Follow `10-end-of-session-questions.mdc`: let the user ask about the system, answer, and record Q&A in `FAQ.md` and the README summary.
+9. **Stop the stack.** Follow `11-stop-service-at-session-end.mdc`: `scripts/stop.sh` must exist; run it when the user is done with the question.
 
 Do not skip FAQ, flowchart, or components. Do not implement before the design docs exist.

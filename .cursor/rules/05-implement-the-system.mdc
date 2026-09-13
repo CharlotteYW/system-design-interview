@@ -19,6 +19,7 @@ Example: `url-shortener` must include a page to paste/create short links, the AP
 Scripts (must succeed, not print "not implemented"):
 
 - `scripts/setup.sh` — activate the `system-design-interview` venv, start frontend + backend + data stores, wait until healthy
+- `scripts/stop.sh` — stop that question’s Compose stack (`docker compose down`, keep volumes)
 - `scripts/run-scenarios.sh` — **integration** tests against the running stack (happy path, failure, one concurrency/edge)
 - `scripts/run-functional.sh` — **functional** tests of user-visible flows (UI and/or HTTP through the real app)
 

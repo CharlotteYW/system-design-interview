@@ -12,6 +12,7 @@ Default stack: **Python 3 + FastAPI + Docker Compose**.
 - No cloud accounts, no paid APIs.
 - Compose must run **frontend + backend + database** (plus Redis/queue/object store when the design needs them).
 - `scripts/setup.sh` must be idempotent: activate the `system-design-interview` venv (`.venv`), compose up, wait for health, seed if needed.
+- `scripts/stop.sh` must be idempotent: `docker compose down` without `-v`. Create it if missing. **Run it when the question session ends** (`11-stop-service-at-session-end.mdc`).
 - `scripts/run-scenarios.sh` — **integration** tests against the running stack:
   - happy path
   - at least one rejection/failure path

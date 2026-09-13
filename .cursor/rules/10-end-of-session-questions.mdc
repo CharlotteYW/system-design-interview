@@ -13,5 +13,6 @@ After the **What we implemented** summary (or after the design wrap-up if the us
    - `FAQ.md` → section **Session questions** (append; date the entry)
    - `README.md` → short list under **What we implemented** / session notes
 4. If they ask more rounds, keep answering and appending. When they are done, say the notes were written to those files.
+5. Then follow `11-stop-service-at-session-end.mdc`: ensure `scripts/stop.sh` exists and **run it** so the local stack is not left up.
 
 On re-practice (`09-update-on-repractice.mdc`), keep old Q&A and add the new session’s questions; do not delete prior study notes unless they are wrong after a design change (then mark superseded).

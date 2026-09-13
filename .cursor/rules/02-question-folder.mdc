@@ -14,6 +14,7 @@ Every `questions/<slug>/` folder must include:
 - `COMPONENTS.md` — each important piece: definition + role in *this* design
 - `docker-compose.yml` — local mocked components (app UI + API, database, extras)
 - `scripts/setup.sh` — activate `system-design-interview` venv, then bring frontend, backend, and data stores up
+- `scripts/stop.sh` — `docker compose down` (no `-v`); run when the question session ends
 - `scripts/run-scenarios.sh` — integration tests against running containers
 - `scripts/run-functional.sh` — functional tests of user-visible flows
 - `src/` — backend (and static frontend unless `frontend/` is separate)

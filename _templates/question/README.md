@@ -99,7 +99,7 @@ Fill this **after** setup and tests pass. Also say it in chat as the close of th
 - **Runs:** TBD (UI, API, stores)
 - **Matches the design:** TBD
 - **Cut (simpler version):** TBD
-- **How to run:** `./scripts/setup.sh`, `./scripts/run-scenarios.sh`, `./scripts/run-functional.sh`
+- **How to run:** `./scripts/setup.sh`, `./scripts/run-scenarios.sh`, `./scripts/run-functional.sh`. Stop with `./scripts/stop.sh`.
 - **Tests prove:** TBD
 - **Session questions:** none yet — invite them after this section, then copy Q&A here and into `FAQ.md`
 
@@ -110,6 +110,7 @@ Not implemented yet.
 - Setup: `./scripts/setup.sh`
 - Integration: `./scripts/run-scenarios.sh`
 - Functional: `./scripts/run-functional.sh`
+- Stop: `./scripts/stop.sh`
 
 ## Interview checklist
 
@@ -120,4 +121,5 @@ Not implemented yet.
 - [ ] 5. Summary and future improvements
 - [ ] 6. What we implemented (after tests)
 - [ ] 7. User questions at the end, recorded in FAQ/README
+- [ ] 8. Stack stopped with `./scripts/stop.sh`
 - [ ] FAQ practiced out loud

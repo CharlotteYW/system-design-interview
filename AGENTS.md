@@ -16,9 +16,10 @@ Follow `.cursor/rules/` in order:
 6. `02-question-folder.mdc` — required files in `questions/<slug>/`
 7. `03-local-implementation.mdc` — Docker, scripts, integration and functional tests
 8. `05-implement-the-system.mdc` — if the system does not exist, build frontend + backend + database and make the scripts pass
-9. `07-python-venv.mdc` — one host venv (`.venv`, prompt `system-design-interview`); all question scripts must use it
+9. `07-python-venv.mdc` — one host venv (`.venv`, prompt `system-design-interview`); setup and test scripts must use it (`stop.sh` does not)
 10. `09-update-on-repractice.mdc` — practicing an existing question again means update docs and code from this conversation
 11. `10-end-of-session-questions.mdc` — invite questions at the end, answer them, record Q&A in FAQ and README
+12. `11-stop-service-at-session-end.mdc` — when the user is done, ensure `scripts/stop.sh` exists and run it so Compose is not left up
 
 ## New vs existing questions
 
@@ -34,4 +35,5 @@ Follow `.cursor/rules/` in order:
 - Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`).
 - Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).
 - Skip the end-of-session Q&A. After the implementation summary, invite questions, answer them, and write them into FAQ/README (`10-end-of-session-questions.mdc`).
+- Leave the local stack running after the question is done. Run `scripts/stop.sh` (`11-stop-service-at-session-end.mdc`).
 - Use system Python or a per-question venv. Host scripts use `.venv` (`system-design-interview`).

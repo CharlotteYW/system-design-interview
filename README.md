@@ -16,7 +16,7 @@ Sources to study from (do not copy write-ups into this repo):
 3. Before that question starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
 4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: you answer each interview step; the agent analyzes it, covers options and tradeoffs, then implements. After the build, you can ask more questions; those Q&As are saved in the folder. Practicing a question **again** updates that folder’s docs and code.
 5. Read that folder's `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`.
-6. Run `./scripts/setup.sh` (creates/activates the `system-design-interview` venv, then starts Docker), then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) once it is **Implemented**.
+6. Run `./scripts/setup.sh` (creates/activates the `system-design-interview` venv, then starts Docker), then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) once it is **Implemented**. When that question session is done, `./scripts/stop.sh` tears the stack down.
 
 ### Status
 
@@ -39,6 +39,7 @@ Every question lives in `questions/<slug>/`:
 | `COMPONENTS.md` | Each important piece: definition + functionality |
 | `docker-compose.yml` | Local mocked components |
 | `scripts/setup.sh` | Activate repo venv, then start frontend, backend, and data stores |
+| `scripts/stop.sh` | Stop that question’s Compose stack (run when the session ends) |
 | `scripts/run-scenarios.sh` | Integration tests against the running stack |
 | `scripts/run-functional.sh` | Functional tests of user-visible flows |
 | `src/` | Backend (and static frontend unless split) |
@@ -156,7 +157,7 @@ Tell Cursor the question name. It should:
 1. Copy `_templates/question/` → `questions/<slug>/`
 2. Fill title, sources, and this index
 3. Design (README, FAQ, FLOW, COMPONENTS)
-4. Implement frontend + backend + database and wire `setup.sh` / `run-scenarios.sh` / `run-functional.sh`
+4. Implement frontend + backend + database and wire `setup.sh` / `run-scenarios.sh` / `run-functional.sh` / `stop.sh`
 
 ## Notes
 
