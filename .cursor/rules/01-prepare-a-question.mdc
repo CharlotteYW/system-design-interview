@@ -19,5 +19,6 @@ When the user names a question (existing slug or new):
 4. **Implement the system** if it does not already run. Follow `05-implement-the-system.mdc`: frontend + backend + database (and other local mocks the design needs). A simpler end-to-end version is OK; docs-only is not.
 5. **`scripts/setup.sh`** starts the stack. **`scripts/run-scenarios.sh`** is integration tests. **`scripts/run-functional.sh`** is functional tests of user-visible flows. All three must pass.
 6. Set README status to **Implemented**, add a **What we implemented** section (what runs, what was cut, how to run, what tests prove), update the root index, and repeat that summary in chat as the close of the question.
+7. **Re-practice:** if this question was already filled in, follow `09-update-on-repractice.mdc` — revise docs and code so the folder matches *this* conversation, then re-run tests if code changed.
 
 Do not skip FAQ, flowchart, or components. Do not implement before the design docs exist.

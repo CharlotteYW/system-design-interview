@@ -19,6 +19,6 @@ Every `questions/<slug>/` folder must include:
 - `src/` — backend (and static frontend unless `frontend/` is separate)
 - `tests/` — integration/functional helpers
 
-Status in README: **Stub** (placeholders), **Designed** (docs filled, no running system), or **Implemented** (setup + integration + functional tests work).
+Status in README: **Stub** (placeholders), **Designed** (docs filled, no running system), or **Implemented** (setup + integration + functional tests work). Re-practice updates the same folder; do not freeze Implemented docs/code.
 
 Slug is kebab-case. Overlapping names from Hello Interview and Alex Xu share one folder.

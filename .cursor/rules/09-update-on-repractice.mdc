@@ -1,0 +1,17 @@
+---
+description: On a second practice of a question, update docs and code to match the latest conversation
+alwaysApply: true
+---
+
+# Update on re-practice
+
+If the user practices a question that **already has** docs or code, this conversation is the new source of truth. Do not leave the folder stuck on an older design.
+
+After (or during) the session:
+
+1. **Docs.** Update `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md` so they match what we just learned (new requirements, options, tradeoffs, chosen path, special situations). Keep original notes; add or revise, do not contradict the latest conclusion without saying why we changed our mind.
+2. **Code.** If the latest design disagrees with the running system, or a gap showed up in practice, change `src/`, Compose, scripts, and tests to match. A simpler local version is still OK; document the cut in **What we implemented**.
+3. **Verify.** If code changed, `setup.sh` and both test scripts must pass again.
+4. **Index.** Keep status and **What we implemented** current in the question README and the root README.
+
+Do not treat “already Implemented” as freeze. Re-practice means revise. Do not start a parallel folder for the same slug.

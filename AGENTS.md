@@ -17,10 +17,11 @@ Follow `.cursor/rules/` in order:
 7. `03-local-implementation.mdc` — Docker, scripts, integration and functional tests
 8. `05-implement-the-system.mdc` — if the system does not exist, build frontend + backend + database and make the scripts pass
 9. `07-python-venv.mdc` — one host venv (`.venv`, prompt `system-design-interview`); all question scripts must use it
+10. `09-update-on-repractice.mdc` — practicing an existing question again means update docs and code from this conversation
 
 ## New vs existing questions
 
-- **Exists** under `questions/<slug>/` → fill design docs, then implement.
+- **Exists** under `questions/<slug>/` → practice again, then **update** that folder’s docs and code to match this conversation (`09-update-on-repractice.mdc`).
 - **New** → copy `_templates/question/` to `questions/<slug>/`, add a row to the root README index, then design and implement.
 
 ## Do not
@@ -30,4 +31,5 @@ Follow `.cursor/rules/` in order:
 - Skip FAQ, FLOW, or COMPONENTS. Every question folder needs all three plus README.
 - Stop at design docs. If the local system is missing, implement it (UI + API + database + tests).
 - Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`).
+- Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).
 - Use system Python or a per-question venv. Host scripts use `.venv` (`system-design-interview`).
