@@ -26,4 +26,4 @@ Good: analyze their cache idea; explain stampede vs connection pressure; compare
 
 Apply this to **all four design steps**. Stay original; cite Hello Interview / Alex Xu, do not paste them.
 
-After implementation and passing tests, close the question with a **what we implemented** summary (chat + README): processes, stores, what was cut, how to run, what tests prove.
+After implementation and passing tests, close with a **what we implemented** summary (chat + README), then follow `10-end-of-session-questions.mdc`: invite the user’s questions, answer them, and record Q&A for next time.

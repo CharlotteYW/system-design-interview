@@ -101,6 +101,7 @@ Fill this **after** setup and tests pass. Also say it in chat as the close of th
 - **Cut (simpler version):** TBD
 - **How to run:** `./scripts/setup.sh`, `./scripts/run-scenarios.sh`, `./scripts/run-functional.sh`
 - **Tests prove:** TBD
+- **Session questions:** none yet — invite them after this section, then copy Q&A here and into `FAQ.md`
 
 ## Local implementation
 
@@ -118,4 +119,5 @@ Not implemented yet.
 - [ ] 4. Component probes and special situations (traffic, rush hour)
 - [ ] 5. Summary and future improvements
 - [ ] 6. What we implemented (after tests)
+- [ ] 7. User questions at the end, recorded in FAQ/README
 - [ ] FAQ practiced out loud

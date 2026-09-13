@@ -1,0 +1,17 @@
+---
+description: Invite end-of-session questions, answer them, and record Q&A in the question summary
+alwaysApply: true
+---
+
+# End-of-session questions
+
+After the **What we implemented** summary (or after the design wrap-up if the user skipped running code), **stop and invite questions**. Do not treat the question as finished until the user has had a chance to ask, or they say they have none.
+
+1. Ask explicitly: what is still unclear about the system, the options, the tradeoffs, or the local build?
+2. Answer each question as a teacher (`08-teach-after-each-answer.mdc`: story, options, tradeoffs, choice).
+3. **Record** every Q and the solution in that question folder so the next practice can reuse it:
+   - `FAQ.md` → section **Session questions** (append; date the entry)
+   - `README.md` → short list under **What we implemented** / session notes
+4. If they ask more rounds, keep answering and appending. When they are done, say the notes were written to those files.
+
+On re-practice (`09-update-on-repractice.mdc`), keep old Q&A and add the new session’s questions; do not delete prior study notes unless they are wrong after a design change (then mark superseded).

@@ -54,6 +54,12 @@ A: Hash cannot offer two aliases for one URL; cache can serve a stale mapping; s
 **Q: What would you add with more time?**  
 A: Custom aliases, analytics, CDN for 302s, ID-based codes, replication.
 
+## Session questions
+
+Questions asked at the end of a practice session. Append with a date.
+
+_None yet._
+
 ## Local system
 
 **Q: What did the simplified implementation teach you that the diagram did not?**  

@@ -48,6 +48,15 @@ A: TBD
 **Q: What would you add with more time?**  
 A: TBD
 
+## Session questions
+
+Questions you asked at the end of a practice session. Append new ones with a date. Do not delete old entries unless a later design change superseded them.
+
+### YYYY-MM-DD
+
+**Q:**  
+A:
+
 ## Local system
 
 **Q: What did the simplified implementation teach you that the diagram did not?**  

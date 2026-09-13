@@ -112,6 +112,7 @@ links (
 - **Cut:** CDN, sharding, custom aliases, analytics, 301, multi-region.
 - **How to run:** `cd questions/url-shortener && ./scripts/setup.sh && ./scripts/run-scenarios.sh && ./scripts/run-functional.sh` then open http://localhost:8000. Stop with `docker compose down`.
 - **Tests prove:** health, create+redirect, invalid URL, unknown code 404, same URL same code, concurrent same URL, UI HTML served.
+- **Session questions:** none yet (ask at the end of a later practice; they will be recorded here and in `FAQ.md`).
 
 ## Local implementation
 
@@ -140,4 +141,5 @@ Open http://localhost:8000 — paste a URL, click the short link, confirm redire
 - [x] 4. Component probes and special situations (traffic, rush hour)
 - [x] 5. Summary and future improvements
 - [x] 6. What we implemented (after tests)
+- [ ] 7. User questions at the end, recorded in FAQ/README
 - [ ] FAQ practiced out loud

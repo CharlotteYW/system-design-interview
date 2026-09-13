@@ -13,4 +13,4 @@ When practicing **any** question, walk through these steps in order. Collaborate
 4. **Component and special-situation questions.** Probe individual components (failure, consistency, APIs). Then scale shocks: 10x traffic, rush hour, hot keys, region loss.
 5. **Summary and future improvements.** Recap the design, call out risks, and name what you would add with more time.
 
-Do not skip a step. After the user answers a step, follow `08-teach-after-each-answer.mdc` (analyze, options, tradeoffs, choice) **before** the next step. Do not jump to implementation before steps 1–4 have been answered and taught. Step 4 belongs in FAQ as well as README. After the local system works, write a **what we implemented** summary.
+Do not skip a step. After the user answers a step, follow `08-teach-after-each-answer.mdc` (analyze, options, tradeoffs, choice) **before** the next step. Do not jump to implementation before steps 1–4 have been answered and taught. Step 4 belongs in FAQ as well as README. After the local system works, write a **what we implemented** summary, then invite the user's own questions (`10-end-of-session-questions.mdc`) and record them.

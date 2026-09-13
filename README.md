@@ -14,7 +14,7 @@ Sources to study from (do not copy write-ups into this repo):
 1. Skim [foundations](foundations/README.md) once so the vocabulary is in place.
 2. In Cursor, prompt a question by name (`rate limiter`, `design Uber`, `url-shortener`, or a new one).
 3. Before that question starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
-4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: you answer each interview step; the agent analyzes it, covers options and tradeoffs, then implements. Practicing a question **again** updates that folder’s docs and code.
+4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: you answer each interview step; the agent analyzes it, covers options and tradeoffs, then implements. After the build, you can ask more questions; those Q&As are saved in the folder. Practicing a question **again** updates that folder’s docs and code.
 5. Read that folder's `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`.
 6. Run `./scripts/setup.sh` (creates/activates the `system-design-interview` venv, then starts Docker), then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) once it is **Implemented**.
 
