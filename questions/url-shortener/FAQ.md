@@ -76,7 +76,13 @@ A: We mint a Snowflake-style 64-bit id, **base62-encode all of it (~11 chars)**,
 A: All in `src/main.py`. (1) `Snowflake.next_id` + `to_base62` + `mint_code`. (2) `shorten()` loop: `mint_code()` then `INSERT INTO links`, retry on `UniqueViolation`. (3) `Singleflight.do` used from `redirect()` on cache miss. (4) `_l1` OrderedDict LRU via `l1_get` / `l1_set`. (5) `_redis`; `cache_get` / `cache_set` wrap L1 then Redis (`GET`/`SET` with TTL; Redis errors ignored).
 
 **Q: Any remaining questions on this design or local build?**  
-A: None. Session closed 2026-09-13.
+A: None at close. Follow-up later the same day (below).
+
+**Q: Why does the singleflight waiter use `event.wait` once instead of a `while` loop?**  
+A: `threading.Event` is a **latch**. The leader writes `box["value"]` or `box["exc"]`, then `event.set()` in `finally`. Waiters sleep until that bit flips (or 10s timeout). There is no predicate to recheck: once set, Event stays set, and CPython `Event.wait` is not the “spurious wakeup + while pred” pattern of `Condition.wait`. A `while not event.is_set(): event.wait()` would be redundant. Timeout here is a hole (`box["value"]` may be missing) — not something a while-on-Event fixes. See `Singleflight.do` in `src/main.py`.
+
+**Q: Singleflight lock: does only one request hold it? Does `event.set` wake `event.wait`? Why `pop` under the lock?**  
+A: (1) `threading.Lock` is exclusive: one thread inside `with self._lock` at a time; others block on acquire, then enter one-by-one only to register leader vs waiter, then **drop the lock** before `wait()` / `fn()`. They do not all hold it together, and they do not hold it for the whole Postgres round-trip. (2) Yes: `event.set()` unblocks every `event.wait()` on that Event. (3) `pop` removes this `code` from `_inflight` so a **later** miss can start a new flight. The lock makes `get`/`insert`/`pop` atomic vs each other so you cannot get two leaders or a waiter holding a popped event that never gets a twin registration bug. See `Singleflight.do`.
 
 ## Local system
 

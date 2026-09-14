@@ -137,7 +137,7 @@ Re-practice (2026-09-13) replaced the hash/idempotent local app.
 - **Cut:** CDN, sharding, custom aliases, analytics, TTL enforcement, Redis cluster, PG replicas, cross-process Redis lock, extra redirect rate-limiting when Redis is down.
 - **How to run:** `cd questions/url-shortener && ./scripts/setup.sh && ./scripts/run-scenarios.sh && ./scripts/run-functional.sh` then open http://localhost:8000. Stop with `./scripts/stop.sh`.
 - **Tests prove:** health, create+redirect with 11-char codes, invalid URL, unknown code 404, same URL → **different** codes, concurrent same URL → **distinct** codes, UI HTML served.
-- **Session questions:** 2026-09-13 — singleflight + hot key; 7 vs 11 char codes vs Bitly/Hello Interview; where in `src/main.py` the generator, INSERT, singleflight, L1, and Redis live (see `FAQ.md`). No further questions; session closed.
+- **Session questions:** 2026-09-13 — singleflight + hot key; 7 vs 11 char codes; code locations; why waiter `event.wait` needs no `while`; lock vs wait vs `pop` (see `FAQ.md`).
 
 ## Local implementation
 
