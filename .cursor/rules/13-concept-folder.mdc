@@ -1,0 +1,17 @@
+---
+description: Layout for core-concept and key-technology lab folders
+globs: core-concepts/**,key-technologies/**,_templates/concept/**
+alwaysApply: false
+---
+
+# Concept folder contract
+
+Every topic under `core-concepts/<slug>/` or `key-technologies/<slug>/` must include:
+
+- `README.md` — explain the concept; **variant comparison is required**; session notes; how to run
+- `docker-compose.yml` — filled when a demo exists (optional for notes-only topics)
+- `scripts/setup.sh`, `scripts/stop.sh`, `scripts/run-scenarios.sh`, `scripts/run-functional.sh` — same venv rules as questions; stubs may exit 1 until prompted
+
+No FAQ / FLOW / COMPONENTS required. Status: **Stub** / **Notes-only** / **Implemented**.
+
+Re-practice updates the same folder (`09-update-on-repractice.mdc` spirit). Original notes only.

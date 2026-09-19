@@ -2,29 +2,32 @@
 
 Personal study repo for **software engineer system design interviews**.
 
-The loop is: pick a question → walk the **five-step interview pattern** (scope → high-level → deep dive → special situations → summary) → implement a **simplified local system** (Python + FastAPI + Docker) → run setup and tests until the idea is concrete.
+The loop is: pick a **question** → five-step interview → local system; or pick a **core concept / key technology** → explain every variant → small demo.
 
 Sources to study from (do not copy write-ups into this repo):
 
 - [Hello Interview — System Design in a Hurry](https://www.hellointerview.com/learn/system-design/in-a-hurry/introduction)
+- [Hello Interview — Core concepts](https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts)
+- [Hello Interview — Key technologies](https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies)
 - Alex Xu, *System Design Interview — An Insider's Guide* Vol 1 and Vol 2
 
 ## How to use this repo
 
 1. Skim [foundations](foundations/README.md) once so the vocabulary is in place.
-2. In Cursor, prompt a question by name (`rate limiter`, `design Uber`, `url-shortener`, or a new one).
-3. Before that question starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
-4. The agent should follow [AGENTS.md](AGENTS.md) and `.cursor/rules/`: you answer each interview step; the agent analyzes it, covers options and tradeoffs, then implements. After the build, you can ask more questions; those Q&As are saved in the folder. Practicing a question **again** updates that folder’s docs and code.
-5. Read that folder's `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`.
-6. Run `./scripts/setup.sh` (creates/activates the `system-design-interview` venv, then starts Docker), then `./scripts/run-scenarios.sh` (integration) and `./scripts/run-functional.sh` (functional) once it is **Implemented**. When that question session is done, `./scripts/stop.sh` tears the stack down.
+2. In Cursor, prompt a **question** (`rate limiter`, `url-shortener`) **or** a **concept** (`Networking Essentials`, `message queue`).
+3. Before that session starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
+4. **Questions** follow [AGENTS.md](AGENTS.md) and the five-step interview pattern, then a full local stack. **Concepts** follow `.cursor/rules/12-prepare-a-concept.mdc`: teach variants in the README, then a small demo. After either, you can ask more; Q&A is saved in that folder. Practicing **again** updates the same folder.
+5. For questions, read `README.md`, `FAQ.md`, `FLOW.md`, and `COMPONENTS.md`. For concepts, the README comparison table is the main doc.
+6. Run `./scripts/setup.sh`, then tests, once **Implemented**. When the session is done, `./scripts/stop.sh` tears the stack down.
 
 ### Status
 
 | Status | Meaning |
 | --- | --- |
-| **Stub** | Folder exists; placeholders only. Prompt the question to fill it. |
-| **Designed** | Docs filled; no running system yet. |
-| **Implemented** | Docker stack (UI + API + DB) + setup + integration + functional tests work. |
+| **Stub** | Folder exists; placeholders only. Prompt the question or concept to fill it. |
+| **Designed** | Docs filled; no running system yet (questions). |
+| **Notes-only** | Concept README filled; no Docker (e.g. numbers-to-know). |
+| **Implemented** | Docker stack + setup + tests work. |
 | *(no folder)* | Listed in the index; created when you ask to prepare it. |
 
 ## Folder contract
@@ -46,6 +49,17 @@ Every question lives in `questions/<slug>/`:
 | `tests/` | Integration / functional helpers |
 
 New questions: copy [`_templates/question/`](_templates/question/) to `questions/<slug>/` and add a row below.
+
+## Concept labs
+
+Hello Interview **core concepts** and **key technologies** live next to questions, not inside them. Prompt one topic at a time.
+
+| Root | Index | Template |
+| --- | --- | --- |
+| [core-concepts/](core-concepts/) | 9 topics (networking, caching, CAP, …) | [`_templates/concept/`](_templates/concept/) |
+| [key-technologies/](key-technologies/) | 11 topics (Postgres, Redis, queues, CDN, …) | same |
+
+Each slug has a README whose **variant table** is the main study artifact, plus stub `scripts/` for a later demo. Not the five-step interview format. See `.cursor/rules/12-prepare-a-concept.mdc`.
 
 ## Python environment
 

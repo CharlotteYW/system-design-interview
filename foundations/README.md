@@ -31,29 +31,37 @@ Source reading:
 
 ## Core concepts
 
+Full labs: **[core-concepts/](../core-concepts/)**. Prompt a topic (e.g. `Networking Essentials`) to fill the README and demo.
+
 From [Hello Interview: Core concepts](https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts) (and the [quick reference](https://www.hellointerview.com/learn/system-design/in-a-hurry/core-concepts/quick-reference)):
 
-- [ ] Networking and protocol choice (HTTP, SSE, WebSockets, gRPC)
-- [ ] API design (REST defaults, pagination, auth)
-- [ ] Data modeling (relational vs NoSQL, normalize vs denormalize)
-- [ ] Indexing
-- [ ] Caching
-- [ ] Sharding
-- [ ] Consistent hashing
-- [ ] Consistency, CAP / PACELC
+- [ ] [Networking Essentials](../core-concepts/networking-essentials/)
+- [ ] [API Design](../core-concepts/api-design/)
+- [ ] [Data Modeling](../core-concepts/data-modeling/)
+- [ ] [Database Indexing](../core-concepts/database-indexing/)
+- [ ] [Caching](../core-concepts/caching/)
+- [ ] [Sharding](../core-concepts/sharding/)
+- [ ] [Consistent Hashing](../core-concepts/consistent-hashing/)
+- [ ] [CAP Theorem](../core-concepts/cap-theorem/)
+- [ ] [Numbers to Know](../core-concepts/numbers-to-know/)
 
 ## Key technologies
 
-From [Hello Interview: Key technologies](https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies). Pick **one example you can defend** in each category:
+Full labs: **[key-technologies/](../key-technologies/)**. Prompt a topic (e.g. `relational database`). Pick **one example you can defend** in each category.
 
-- [ ] Relational database (default: Postgres)
-- [ ] NoSQL / key-value (default local mock: Redis)
-- [ ] Blob / object storage
-- [ ] Cache
-- [ ] Message queue
-- [ ] Load balancer / API gateway
-- [ ] Search index
-- [ ] CDN
+From [Hello Interview: Key technologies](https://www.hellointerview.com/learn/system-design/in-a-hurry/key-technologies):
+
+- [ ] [Relational database](../key-technologies/relational-database/) (default: Postgres)
+- [ ] [NoSQL database](../key-technologies/nosql-database/)
+- [ ] [Blob / object storage](../key-technologies/blob-storage/)
+- [ ] [Search index](../key-technologies/search-index/)
+- [ ] [API gateway](../key-technologies/api-gateway/)
+- [ ] [Load balancer](../key-technologies/load-balancer/)
+- [ ] [Message queue](../key-technologies/message-queue/)
+- [ ] [Streams](../key-technologies/stream-processing/)
+- [ ] [Distributed lock](../key-technologies/distributed-lock/)
+- [ ] [Distributed cache](../key-technologies/distributed-cache/)
+- [ ] [CDN](../key-technologies/cdn/)
 
 ## Common patterns
 

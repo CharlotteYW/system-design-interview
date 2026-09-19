@@ -1,0 +1,9 @@
+# Local demo skeleton. Fill when this concept is prompted.
+# Default study stack: Python/FastAPI. Add Postgres, Redis, MinIO, Kafka, nginx
+# only if that concept actually needs them.
+
+# services:
+#   app:
+#     build: .
+#     ports:
+#       - "8000:8000"

@@ -20,18 +20,24 @@ Follow `.cursor/rules/` in order:
 10. `09-update-on-repractice.mdc` — practicing an existing question again means update docs and code from this conversation
 11. `10-end-of-session-questions.mdc` — invite questions at the end, answer them, record Q&A in FAQ and README
 12. `11-stop-service-at-session-end.mdc` — when the user is done, ensure `scripts/stop.sh` exists and run it so Compose is not left up
+13. `12-prepare-a-concept.mdc` — core concepts and key technologies: explain variants, then a small demo (not the five-step product interview)
+14. `13-concept-folder.mdc` — required files under `core-concepts/` and `key-technologies/`
 
 ## New vs existing questions
 
 - **Exists** under `questions/<slug>/` → practice again, then **update** that folder’s docs and code to match this conversation (`09-update-on-repractice.mdc`).
-- **New** → copy `_templates/question/` to `questions/<slug>/`, add a row to the root README index, then design and implement.
+- **New question** → copy `_templates/question/` to `questions/<slug>/`, add a row to the root README index, then design and implement.
+
+## When the user names a core concept or key technology
+
+Follow `12-prepare-a-concept.mdc`. Folders already exist as stubs. Fill the README comparison first; implement a small lab if it teaches the idea. Do not use the five-step Bitly-style interview pattern.
 
 ## Do not
 
 - Copy Hello Interview or Alex Xu write-ups verbatim. Cite the source and write original notes.
 - Spin up cloud accounts. Mock components with local Docker.
-- Skip FAQ, FLOW, or COMPONENTS. Every question folder needs all three plus README.
-- Stop at design docs. If the local system is missing, implement it (UI + API + database + tests).
+- Skip FAQ, FLOW, or COMPONENTS **on product questions**. Concept labs use the README comparison instead (`12-prepare-a-concept.mdc`).
+- Stop at design docs **for product questions**. If that local system is missing, implement it. Concept labs may stay **Notes-only** when a table is the whole lesson (`numbers-to-know`).
 - Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`).
 - Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).
 - Skip the end-of-session Q&A. After the implementation summary, invite questions, answer them, and write them into FAQ/README (`10-end-of-session-questions.mdc`).

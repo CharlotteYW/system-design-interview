@@ -7,7 +7,7 @@ alwaysApply: true
 
 This repo has **one** host virtualenv: prompt name `system-design-interview`, directory `.venv/` at the repo root. Do not use system Python. Do not create a venv per question.
 
-- `scripts/setup.sh`, `scripts/run-scenarios.sh`, and `scripts/run-functional.sh` must `source` [`scripts/use-venv.sh`](scripts/use-venv.sh) after setting `REPO_ROOT` (and `QUESTION_DIR`).
+- `scripts/setup.sh`, `scripts/run-scenarios.sh`, and `scripts/run-functional.sh` (questions **and** concept labs) must `source` [`scripts/use-venv.sh`](scripts/use-venv.sh) after setting `REPO_ROOT` (and `QUESTION_DIR` / `CONCEPT_DIR`).
 - `scripts/stop.sh` only runs `docker compose down`; it does not need the venv.
 - `use-venv.sh` creates `.venv` if missing, activates it, and installs root `requirements.txt` (plus `requirements-host.txt` in the question folder if present).
 - Host tests and helper scripts run in this venv. App processes still run in Docker Compose.

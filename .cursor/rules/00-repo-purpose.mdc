@@ -9,8 +9,9 @@ This is a personal study repo for software engineer **system design interviews**
 
 - Goal: understand each concept by **designing then running a simplified local system**, not by memorizing diagrams.
 - After each of the user's design answers, **teach**: analyze their reply, other options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). One-line verdicts are not enough.
-- One question = one folder under `questions/`.
+- One question = one folder under `questions/`. One core concept = `core-concepts/<slug>/`. One key technology = `key-technologies/<slug>/`.
 - Prefer a working subset that teaches the idea over a complete production clone.
 - Notes must be original. Link to Hello Interview and cite Alex Xu chapters. Never paste copyrighted write-ups.
 - Mock infra with local Docker. No cloud accounts.
-- When the user names a question, prepare that question end-to-end (docs + local implementation) unless they ask for docs only.
+- When the user names a **question**, prepare that question end-to-end (docs + local implementation) unless they ask for docs only.
+- When the user names a **core concept** or **key technology**, follow `12-prepare-a-concept.mdc` (explain variants first; small demo; not the five-step product interview).
