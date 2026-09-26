@@ -23,6 +23,9 @@ source "${SDI_VENV}/bin/activate"
 
 python -m pip install --upgrade pip >/dev/null
 python -m pip install -r "${REPO_ROOT}/requirements.txt" >/dev/null
+if [[ -z "${QUESTION_DIR:-}" && -n "${CONCEPT_DIR:-}" ]]; then
+  QUESTION_DIR="${CONCEPT_DIR}"
+fi
 # Host-only extras for this question (tests). Do not point this at the Docker app requirements.txt.
 if [[ -n "${QUESTION_DIR:-}" && -f "${QUESTION_DIR}/requirements-host.txt" ]]; then
   python -m pip install -r "${QUESTION_DIR}/requirements-host.txt" >/dev/null

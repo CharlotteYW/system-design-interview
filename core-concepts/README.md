@@ -12,7 +12,7 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | 2 | API Design | [api-design](api-design/) | Stub |
 | 3 | Data Modeling | [data-modeling](data-modeling/) | Stub |
 | 4 | Database Indexing | [database-indexing](database-indexing/) | Stub |
-| 5 | Caching | [caching](caching/) | Stub |
+| 5 | Caching | [caching](caching/) | Implemented |
 | 6 | Sharding | [sharding](sharding/) | Stub |
 | 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Stub |
 | 8 | CAP Theorem | [cap-theorem](cap-theorem/) | Stub |

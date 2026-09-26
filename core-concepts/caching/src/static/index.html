@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Caching lab</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        line-height: 1.4;
+      }
+      input,
+      button {
+        font: inherit;
+        padding: 0.4rem 0.6rem;
+      }
+      input[type="text"] {
+        width: 100%;
+      }
+      .row {
+        margin: 0.75rem 0;
+      }
+      ol {
+        padding-left: 1.25rem;
+      }
+      .status {
+        font-family: ui-monospace, monospace;
+        font-size: 1.15rem;
+        padding: 0.75rem;
+        border: 1px solid currentColor;
+      }
+      .error {
+        color: #b00020;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Caching lab</h1>
+    <ol>
+      <li>Click <strong>Fetch</strong> — <code>MISS</code> (Postgres).</li>
+      <li>Click <strong>Fetch</strong> again — <code>L1</code> (same process, no Redis/DB).</li>
+      <li>Change the body, <strong>Save</strong>, then <strong>Fetch</strong> — <code>MISS</code> with the new text.</li>
+      <li>Fetch once more so both caches fill, click <strong>Drop L1 only</strong>, then <strong>Fetch</strong> — <code>REDIS</code> (L2). Next Fetch is <code>L1</code> again.</li>
+    </ol>
+    <p>
+      GET is cache-aside (L1 → Redis → Postgres). PUT invalidates. The big line
+      below is the cache result (also sent as header <code>X-Cache</code>).
+    </p>
+    <div class="row">
+      <label>
+        Item id
+        <input id="id" type="number" min="1" value="1" />
+      </label>
+    </div>
+    <div class="row">
+      <button id="fetch" type="button">Fetch</button>
+      <button id="flush-l1" type="button">Drop L1 only</button>
+      <button id="flush" type="button">Flush L1+Redis</button>
+    </div>
+    <div class="row">
+      <label>
+        Body
+        <input id="body" type="text" placeholder="type a new value before Save" />
+      </label>
+    </div>
+    <div class="row">
+      <button id="save" type="button">Save (invalidate)</button>
+    </div>
+    <p class="status" id="status">Cache status will show here after Fetch.</p>
+    <p class="error" id="error" hidden></p>
+    <script>
+      const idEl = document.getElementById("id");
+      const bodyEl = document.getElementById("body");
+      const status = document.getElementById("status");
+      const error = document.getElementById("error");
+      function showError(text) {
+        error.textContent = text;
+        error.hidden = !text;
+      }
+      function detail(data) {
+        if (typeof data.detail === "string") return data.detail;
+        return JSON.stringify(data.detail || data);
+      }
+      async function fetchItem() {
+        showError("");
+        const id = idEl.value;
+        const response = await fetch(`/api/items/${id}`);
+        const data = await response.json();
+        if (!response.ok) {
+          showError(detail(data));
+          return;
+        }
+        bodyEl.value = data.body;
+        status.textContent = `cache=${data.cache}  body=${data.body}`;
+      }
+      document.getElementById("fetch").addEventListener("click", () => {
+        fetchItem().catch((err) => showError(String(err)));
+      });
+      document.getElementById("flush-l1").addEventListener("click", async () => {
+        showError("");
+        await fetch("/api/flush-l1", { method: "POST" });
+        status.textContent = "L1 dropped — next Fetch should be REDIS if L2 still has the key";
+      });
+      document.getElementById("flush").addEventListener("click", async () => {
+        showError("");
+        await fetch("/api/flush-cache", { method: "POST" });
+        status.textContent = "caches flushed — next Fetch should be MISS";
+      });
+      document.getElementById("save").addEventListener("click", async () => {
+        showError("");
+        const id = idEl.value;
+        const body = bodyEl.value.trim();
+        if (!body) {
+          showError("Type a new body before Save.");
+          return;
+        }
+        const response = await fetch(`/api/items/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ body }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          showError(detail(data));
+          return;
+        }
+        status.textContent = `saved + cache invalidated  body=${data.body} — Fetch again for MISS`;
+      });
+    </script>
+  </body>
+</html>
