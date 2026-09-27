@@ -16,4 +16,4 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | 6 | Sharding | [sharding](sharding/) | Stub |
 | 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Stub |
 | 8 | CAP Theorem | [cap-theorem](cap-theorem/) | Stub |
-| 9 | Numbers to Know | [numbers-to-know](numbers-to-know/) | Stub |
+| 9 | Numbers to Know | [numbers-to-know](numbers-to-know/) | Notes-only |

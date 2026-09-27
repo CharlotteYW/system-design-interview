@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 CONCEPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-# shellcheck source=/dev/null
-source "${REPO_ROOT}/scripts/use-venv.sh"
-
-echo "Not implemented yet."
-echo "When this concept is prompted, this script will start a small Docker demo in:"
-echo "  ${CONCEPT_DIR}"
-exit 1
+echo "numbers-to-know is notes-only. Nothing to start."
+echo "Read: ${CONCEPT_DIR}/README.md"
+exit 0
