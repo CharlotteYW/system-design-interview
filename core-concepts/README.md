@@ -11,7 +11,7 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | 1 | Networking Essentials | [networking-essentials](networking-essentials/) | Stub |
 | 2 | API Design | [api-design](api-design/) | Stub |
 | 3 | Data Modeling | [data-modeling](data-modeling/) | Stub |
-| 4 | Database Indexing | [database-indexing](database-indexing/) | Stub |
+| 4 | Database Indexing | [database-indexing](database-indexing/) | Implemented |
 | 5 | Caching | [caching](caching/) | Implemented |
 | 6 | Sharding | [sharding](sharding/) | Stub |
 | 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Stub |

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Database indexing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+      button { font: inherit; margin: 0.3rem 0.4rem 0.3rem 0; padding: 0.35rem 0.55rem; }
+      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; }
+      code { font-family: ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Database indexing</h1>
+    <p>
+      100,000 rows in <code>events</code>. The primary key on <code>id</code> is already a B-tree.
+      The extra index, when you create it, is <code>(user_id, created_at)</code>.
+      Postgres sorts that index by <code>user_id</code> first.
+    </p>
+    <p id="status">Loading status…</p>
+    <div>
+      <button id="create" type="button">Create composite index</button>
+      <button id="drop" type="button">Drop composite index</button>
+    </div>
+    <h2>Three queries</h2>
+    <div>
+      <button id="user" type="button">SELECT * WHERE user_id = 42</button>
+      <button id="both" type="button">WHERE user_id = 42 AND created_at &gt;= June 1</button>
+      <button id="date" type="button">WHERE created_at is June 1 only</button>
+    </div>
+    <h2>Covering</h2>
+    <p>
+      The composite index already stores <code>user_id</code> and <code>created_at</code>.
+      A query that needs only those columns can be an <strong>Index Only Scan</strong>: Postgres does not read the table page.
+      <code>body</code> is not in the index, so selecting it still reads the table (a heap fetch) after the index finds the rows.
+    </p>
+    <div>
+      <button id="cover" type="button">SELECT user_id, created_at</button>
+      <button id="body" type="button">SELECT body</button>
+    </div>
+    <pre id="out">Pick a query. EXPLAIN shows up here.</pre>
+    <h2>What you should see</h2>
+    <ul>
+      <li><strong>No composite index.</strong> All three plans start with a sequential scan. Postgres reads the table.</li>
+      <li><strong>After the index.</strong> <code>user_id = 42</code> and <code>user_id = 42 AND created_at …</code> use the index.</li>
+      <li><strong>Date only.</strong> June 1 on <code>created_at</code> alone still scans the table.</li>
+      <li><strong>Covering.</strong> <code>SELECT user_id, created_at</code> is an Index Only Scan. <code>SELECT body</code> uses the index to find rows, then reads <code>body</code> from the table.</li>
+    </ul>
+    <script>
+      const out = document.querySelector("#out");
+      const status = document.querySelector("#status");
+      async function refresh() {
+        const body = await fetch("/api/status").then((r) => r.json());
+        status.textContent = body.composite_index
+          ? `Index ${body.index_name} is present. ${body.rows} rows.`
+          : `No composite index yet. ${body.rows} rows. The id primary key is still indexed.`;
+      }
+      async function explain(kind) {
+        const body = await fetch("/api/explain/" + kind).then((r) => r.json());
+        out.textContent = body.sql + "\n\n" + body.plan;
+        await refresh();
+      }
+      document.querySelector("#create").onclick = async () => {
+        await fetch("/api/index", { method: "POST" });
+        await refresh();
+        out.textContent = "Composite index created. Run the queries again, including the two covering buttons.";
+      };
+      document.querySelector("#drop").onclick = async () => {
+        await fetch("/api/index", { method: "DELETE" });
+        await refresh();
+        out.textContent = "Composite index dropped.";
+      };
+      document.querySelector("#user").onclick = () => explain("user");
+      document.querySelector("#both").onclick = () => explain("both");
+      document.querySelector("#date").onclick = () => explain("date");
+      document.querySelector("#cover").onclick = () => explain("cover");
+      document.querySelector("#body").onclick = () => explain("body");
+      refresh();
+    </script>
+  </body>
+</html>
