@@ -72,7 +72,7 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | # | Question | Folder | Sources |
 | --- | --- | --- | --- |
 | 1 | URL shortener (Bitly) | [questions/url-shortener](questions/url-shortener/) | Hello Interview · Alex Xu Vol 1 Ch 8 · **Implemented** |
-| 2 | Rate limiter | [questions/rate-limiter](questions/rate-limiter/) | Hello Interview · Alex Xu Vol 1 Ch 4 |
+| 2 | Rate limiter | [questions/rate-limiter](questions/rate-limiter/) | Hello Interview · Alex Xu Vol 1 Ch 4 · **Implemented** |
 | 3 | Unique ID generator | [questions/unique-id-generator](questions/unique-id-generator/) | Alex Xu Vol 1 Ch 7 |
 | 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 |
 | 5 | Notification system | [questions/notification-system](questions/notification-system/) | Hello Interview · Alex Xu Vol 1 Ch 10 |
@@ -104,7 +104,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | WhatsApp | Medium | [Stub](questions/chat-system/) | |
 | Strava | Medium | listed | |
 | Distributed Cache | Medium | [Stub](questions/key-value-store/) | |
-| Rate Limiter | Medium | [Stub](questions/rate-limiter/) | |
+| Rate Limiter | Medium | [Implemented](questions/rate-limiter/) | |
 | Online Auction | Medium | listed | |
 | YouTube | Medium | [Stub](questions/youtube/) | |
 | Job Scheduler | Medium | listed | |
@@ -133,7 +133,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 
 | Chapter | Question | Status |
 | --- | --- | --- |
-| 4 | Rate limiter | [Stub](questions/rate-limiter/) |
+| 4 | Rate limiter | [Implemented](questions/rate-limiter/) |
 | 5 | Consistent hashing | listed |
 | 6 | Key-value store | [Stub](questions/key-value-store/) |
 | 7 | Unique ID generator | [Stub](questions/unique-id-generator/) |

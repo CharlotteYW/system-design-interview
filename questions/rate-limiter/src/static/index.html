@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rate limiter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+      label { display: block; margin: 0.6rem 0 0.2rem; }
+      select, input, button { font: inherit; padding: 0.35rem 0.5rem; }
+      button { margin-right: 0.4rem; margin-top: 0.4rem; }
+      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; min-height: 4rem; }
+      .card { border: 1px solid #8884; padding: 0.6rem 0.8rem; margin: 0.5rem 0; }
+      .card.on { border-color: currentColor; }
+      .example { font-family: ui-monospace, monospace; font-size: 0.92rem; margin: 0.4rem 0 0; }
+      h1 { margin-bottom: 0.2rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Rate limiter</h1>
+    <p>
+      The check runs in this API (middleware), then Redis. Rules are loaded once from
+      <code>src/rules.yaml</code> at startup. Production algorithm is
+      <strong>sliding window counter</strong>. This page runs all five so you can compare.
+      <code>POST /api/work</code> is 5 per 10s and writes Postgres only when allowed.
+      <code>GET /api/ping</code> is 20 per 10s. <code>GET /api/edge</code> is 10 per 60s.
+    </p>
+
+    <label for="algo">Algorithm</label>
+    <select id="algo">
+      <option value="sliding_counter">Sliding window counter (ship this)</option>
+      <option value="fixed">Fixed window</option>
+      <option value="sliding_log">Sliding window log</option>
+      <option value="token_bucket">Token bucket</option>
+      <option value="leaky_bucket">Leaky bucket</option>
+    </select>
+    <p id="algo-help"></p>
+
+    <label for="client">Client id (stands in for a user; IP is used if empty)</label>
+    <input id="client" value="demo" />
+
+    <div>
+      <button id="ping" type="button">Ping once</button>
+      <button id="work" type="button">Work once</button>
+      <button id="hammer" type="button">Send 8 work calls</button>
+      <button id="edge" type="button">Edge: 10 at :59 then 10 at :01</button>
+    </div>
+    <pre id="out">Results show up here.</pre>
+
+    <h2>What each algorithm means</h2>
+    <p>The dropdown runs that algorithm in Redis. Read the matching card, then try the buttons. Use a new client id when you switch algorithms so the counters do not mix.</p>
+
+    <div class="card on" data-algo="fixed">
+      <strong>Fixed window.</strong>
+      Redis keeps one integer for the current clock bucket and <code>INCR</code>s it. The bucket resets when the clock crosses the window, not when your first call happened.
+      <p class="example">Example, limit 10 per 60s. Ten calls at 59.9s fill the 0–60s bucket. At 60.0s a new bucket starts at 0, so ten more are allowed. That is 20 calls about 0.1s apart. Press “Edge” on Fixed window: allowed=10, then allowed=10.</p>
+    </div>
+    <div class="card" data-algo="sliding_counter">
+      <strong>Sliding window counter.</strong>
+      Redis keeps this bucket and the previous one. The previous count is multiplied by how much of it still sits inside the last window: <code>previous × (window − elapsed) / window + current</code>.
+      <p class="example">Example, same 10 at 59.9s. At 60.0s the previous bucket still counts in full (elapsed is 0), so the estimate is 10. The next ten calls are 429. Press “Edge” on Sliding window counter: allowed=10, then denied=10. A few seconds later the previous bucket weighs less, so a few new calls can pass. This is the one to ship.</p>
+    </div>
+    <div class="card" data-algo="sliding_log">
+      <strong>Sliding window log.</strong>
+      Redis stores the timestamp of each allowed call in a sorted set and counts timestamps newer than <code>now − window</code>.
+      <p class="example">Example, same edge. At 60.0s all ten timestamps from 59.9s are still inside the last 60s, so the next calls are 429. Same answer as the counter on this edge, with one Redis entry per allow instead of two integers. Fine in this lab. Heavy at 10k QPS.</p>
+    </div>
+    <div class="card" data-algo="token_bucket">
+      <strong>Token bucket.</strong>
+      Redis stores how many tokens are left and when they were last refilled. The bucket starts full. Each allow spends one token. Tokens come back at <code>limit / window</code>.
+      <p class="example">Example, <code>POST /api/work</code> is 5 per 10s, so the bucket starts with 5 tokens and refills one token about every 2s. Press “Send 8 work calls”: five 200s (a row in Postgres each time), then 429s. Wait about 2 seconds and one more work call can succeed, without waiting for a clock minute to end.</p>
+    </div>
+    <div class="card" data-algo="leaky_bucket">
+      <strong>Leaky bucket.</strong>
+      Redis stores a water level and the last leak time. The bucket starts empty. Each allow adds 1. The level falls at <code>limit / window</code>. A call that would rise past the limit is a 429, and the level does not rise.
+      <p class="example">Example, work is capacity 5, leaking about one unit every 2s. Five fast work calls fill it (200). The sixth is 429 until some level has leaked away. This page does not hold the HTTP connection in a queue; it rejects when the bucket is full. That steady leak is what people mean by “smooth.” The token bucket instead lets you spend a saved-up burst.</p>
+    </div>
+    <div class="card">
+      <strong>Redis down, or already over the cap.</strong>
+      If Redis errors, this process uses a smaller fixed window: <code>limit ÷ 4</code>. After Redis has already returned over the limit, this process remembers “blocked until the window ends” and answers 429 without another Redis call. The header <code>X-Rate-Path</code> says <code>redis</code>, <code>local-block</code>, or <code>local-emergency</code>.
+      <p class="example">Example, work limit 5. Calls 1–5 are 200 path=redis. Call 6 is 429 path=redis. Calls 7 and 8 are 429 path=local-block.</p>
+    </div>
+
+    <script>
+      const help = {
+        fixed: "Selected: fixed window. Edge demo should allow 10, then allow 10 again.",
+        sliding_counter: "Selected: sliding window counter. Edge demo should allow 10, then deny 10.",
+        sliding_log: "Selected: sliding window log. Edge demo should allow 10, then deny 10. One timestamp per allow.",
+        token_bucket: "Selected: token bucket. Eight work calls should be five 200s, then 429s. Tokens refill over time.",
+        leaky_bucket: "Selected: leaky bucket. Five fast work calls fill it. The sixth waits until the level leaks.",
+      };
+      const algo = document.querySelector("#algo");
+      const helpEl = document.querySelector("#algo-help");
+      const out = document.querySelector("#out");
+      function showHelp() {
+        helpEl.textContent = help[algo.value];
+        document.querySelectorAll("[data-algo]").forEach((card) => {
+          card.classList.toggle("on", card.dataset.algo === algo.value);
+        });
+      }
+      algo.addEventListener("change", showHelp);
+      showHelp();
+
+      function headers() {
+        return {
+          "X-Client-Id": document.querySelector("#client").value || "demo",
+          "X-Rate-Algorithm": algo.value,
+        };
+      }
+
+      async function call(path, options) {
+        const response = await fetch(path, { ...options, headers: { ...headers(), ...(options && options.headers) } });
+        const text = await response.text();
+        return { status: response.status, path: response.headers.get("x-rate-path"), body: text };
+      }
+
+      function paint(lines) { out.textContent = lines.join("\n"); }
+
+      document.querySelector("#ping").onclick = async () => {
+        const row = await call("/api/ping");
+        paint([`ping ${row.status} path=${row.path}`, row.body]);
+      };
+      document.querySelector("#work").onclick = async () => {
+        const row = await call("/api/work", { method: "POST" });
+        paint([`work ${row.status} path=${row.path}`, row.body]);
+      };
+      document.querySelector("#hammer").onclick = async () => {
+        const lines = [];
+        for (let i = 1; i <= 8; i++) {
+          const row = await call("/api/work", { method: "POST" });
+          lines.push(`${i}: ${row.status} path=${row.path}`);
+        }
+        paint(lines);
+      };
+      document.querySelector("#edge").onclick = async () => {
+        const id = "edge-" + Date.now();
+        document.querySelector("#client").value = id;
+        const lines = [`algorithm=${algo.value}`, "10 calls at t=59.9s, then 10 at t=60.0s (limit 10 per 60s)"];
+        for (const stamp of [59900, 60000]) {
+          let ok = 0;
+          let denied = 0;
+          for (let i = 0; i < 10; i++) {
+            const row = await call("/api/edge", { headers: { "X-Rate-Now-Ms": String(stamp) } });
+            if (row.status === 200) ok += 1;
+            else denied += 1;
+          }
+          lines.push(`t=${stamp}ms allowed=${ok} denied=${denied}`);
+        }
+        paint(lines);
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+# Loaded once when the API process starts. A request never reads this file.
+# Change a limit, then restart the process (docker compose up --build).
+routes:
+  "GET /api/ping":
+    name: ping
+    limit: 20
+    window_seconds: 10
+  "POST /api/work":
+    name: work
+    limit: 5
+    window_seconds: 10
+  "GET /api/edge":
+    name: edge
+    limit: 10
+    window_seconds: 60
