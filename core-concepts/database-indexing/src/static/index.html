@@ -7,7 +7,8 @@
     <style>
       body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
       button { font: inherit; margin: 0.3rem 0.4rem 0.3rem 0; padding: 0.35rem 0.55rem; }
-      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; }
+      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; white-space: pre-wrap; }
+      pre.log { min-height: 4.5rem; margin-top: 0.6rem; }
       code { font-family: ui-monospace, monospace; }
     </style>
   </head>
@@ -39,6 +40,46 @@
       <button id="cover" type="button">SELECT user_id, created_at</button>
       <button id="body" type="button">SELECT body</button>
     </div>
+    <h2>LSM tree</h2>
+    <p>
+      Postgres keeps the B-tree above. An LSM tree is the storage format of the whole table, sorted by the primary key, not an extra index on any column.
+      A write appends to a log and lands in a small sorted table in RAM (the memtable).
+      When that table is full, it is frozen into a sorted file on disk (an SSTable).
+      A read checks RAM first, then the newest file. A bloom filter and compaction are how a real engine avoids opening every file. This button does not run those.
+    </p>
+    <button id="lsm" type="button">Write 11 keys, flush at 8</button>
+    <pre id="lsm-log" class="log">Click the button. Each WAL append and the flush show up here.</pre>
+    <h2>Geospatial</h2>
+    <p>
+      The restaurants table is latitude and longitude, with a B-tree on each:
+      <code>CREATE INDEX idx_lat ON restaurants(latitude)</code> and
+      <code>CREATE INDEX idx_lng ON restaurants(longitude)</code>.
+      Four restaurants sit in this database. The question is which ones are within 200 meters of the Ferry Building.
+    </p>
+    <ul>
+      <li><strong>idx_lat / idx_lng.</strong> Each index is one strip. Using both is a rectangle in degrees.</li>
+      <li><strong>Geohash.</strong> The second button turns lat/lon into a short code, one character at a time, then retrieves restaurants whose code starts with that prefix.</li>
+      <li><strong>Quadtree.</strong> Split the map into four until a cell is small. Walk squares that overlap the search square, then check distance.</li>
+      <li><strong>R-tree.</strong> Nested boxes. PostGIS GiST checks the real 200 meter disk.</li>
+    </ul>
+    <div>
+      <button id="geo" type="button">Compare B-trees, geohash, quadtree, and R-tree</button>
+      <button id="geo-code" type="button">Show lat/lon → index code</button>
+    </div>
+    <pre id="geo-log" class="log">Click the button. Each index lists which restaurants it returns for “within 200 meters.”</pre>
+    <h2>Inverted index</h2>
+    <p>
+      Full search reads every <code>body</code> looking for <code>redis</code>. There is no map from the word to the rows.
+      The word index is that map: <code>redis</code> points at the document ids. Postgres GIN is a real inverted index.
+      Elasticsearch stores the same kind of map, and adds ranking and typo tolerance. This page keeps both sides in Postgres so you can see the scan and the map.
+    </p>
+    <div>
+      <button id="fullscan" type="button">Full search: read every body</button>
+      <button id="gin-drop" type="button">Drop word index</button>
+      <button id="gin-create" type="button">Create word index</button>
+      <button id="search" type="button">Inverted index: redis → documents</button>
+    </div>
+    <pre id="word-log" class="log">Click full search, then create the word index and click the inverted-index button.</pre>
     <pre id="out">Pick a query. EXPLAIN shows up here.</pre>
     <h2>What you should see</h2>
     <ul>
@@ -52,13 +93,52 @@
       const status = document.querySelector("#status");
       async function refresh() {
         const body = await fetch("/api/status").then((r) => r.json());
-        status.textContent = body.composite_index
-          ? `Index ${body.index_name} is present. ${body.rows} rows.`
-          : `No composite index yet. ${body.rows} rows. The id primary key is still indexed.`;
+        status.textContent = (body.composite_index
+          ? `Composite index ${body.index_name} is present. `
+          : "No composite index yet. The id primary key is still indexed. ")
+          + `${body.rows} event rows. Word index: ${body.gin_index ? "present" : "absent"}.`;
+      }
+      function placeLine(label, yes) {
+        return `${label}: ${yes ? "YES" : "no"}`;
       }
       async function explain(kind) {
         const body = await fetch("/api/explain/" + kind).then((r) => r.json());
-        out.textContent = body.sql + "\n\n" + body.plan;
+        if (kind === "geo" || kind === "latband") {
+          const title = kind === "geo"
+            ? "Within 200 meters of the Ferry Building"
+            : "Latitude band 37.79–37.80";
+          const geoLog = document.querySelector("#geo-log");
+          geoLog.textContent = [
+            title,
+            body.sql,
+            "",
+            body.plan,
+            "",
+            placeLine("Ferry Building", body.ferry),
+            placeLine("Atlantic same latitude", body.atlantic),
+          ].join("\n");
+          geoLog.scrollIntoView({ block: "nearest" });
+        } else if (kind === "search" || kind === "fullscan") {
+          const ids = body.names.join(", ");
+          const title = kind === "fullscan"
+            ? "Full search. Every body is read. There is no word → document map."
+            : (body.plan.includes("Seq Scan")
+              ? "No word index, so Postgres still reads every row."
+              : "Inverted index. redis points at these document ids.");
+          const wordLog = document.querySelector("#word-log");
+          wordLog.textContent = [
+            title,
+            body.sql,
+            "",
+            body.plan,
+            "",
+            `redis → ${ids}`,
+            `${body.names.length} documents`,
+          ].join("\n");
+          wordLog.scrollIntoView({ block: "nearest" });
+        } else {
+          out.textContent = body.sql + "\n\n" + body.plan;
+        }
         await refresh();
       }
       document.querySelector("#create").onclick = async () => {
@@ -76,6 +156,34 @@
       document.querySelector("#date").onclick = () => explain("date");
       document.querySelector("#cover").onclick = () => explain("cover");
       document.querySelector("#body").onclick = () => explain("body");
+      document.querySelector("#lsm").onclick = async () => {
+        const body = await fetch("/api/lsm").then((r) => r.json());
+        const lsmLog = document.querySelector("#lsm-log");
+        lsmLog.textContent = body.log.join("\n");
+        lsmLog.scrollIntoView({ block: "nearest" });
+      };
+      async function showGeo(url) {
+        const body = await fetch(url).then((r) => r.json());
+        const geoLog = document.querySelector("#geo-log");
+        geoLog.textContent = body.log.join("\n");
+        geoLog.scrollIntoView({ block: "nearest" });
+      }
+      document.querySelector("#geo").onclick = () => showGeo("/api/geo/compare");
+      document.querySelector("#geo-code").onclick = () => showGeo("/api/geo/code");
+      document.querySelector("#gin-create").onclick = async () => {
+        await fetch("/api/gin", { method: "POST" });
+        await refresh();
+        out.textContent = "Word index created. Click “Inverted index: redis → documents”.";
+        document.querySelector("#word-log").textContent = out.textContent;
+      };
+      document.querySelector("#gin-drop").onclick = async () => {
+        await fetch("/api/gin", { method: "DELETE" });
+        await refresh();
+        out.textContent = "Word index dropped. Inverted lookup will read every row until you create it again.";
+        document.querySelector("#word-log").textContent = out.textContent;
+      };
+      document.querySelector("#fullscan").onclick = () => explain("fullscan");
+      document.querySelector("#search").onclick = () => explain("search");
       refresh();
     </script>
   </body>

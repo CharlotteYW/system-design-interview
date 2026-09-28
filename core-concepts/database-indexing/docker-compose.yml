@@ -21,13 +21,13 @@ services:
       retries: 20
 
   postgres:
-    image: postgres:16-alpine
+    image: postgis/postgis:16-3.4
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_postgis:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s
@@ -35,4 +35,4 @@ services:
       retries: 10
 
 volumes:
-  pgdata:
+  pgdata_postgis:

@@ -10,7 +10,7 @@ cd "${CONCEPT_DIR}"
 docker compose up --build -d
 
 echo "Waiting for http://localhost:8000/healthz ..."
-for _ in $(seq 1 60); do
+for _ in $(seq 1 90); do
   if curl -sf http://localhost:8000/healthz >/dev/null; then
     echo "Indexing lab is up at http://localhost:8000 — leave it running to read EXPLAIN. Stop later with ./scripts/stop.sh."
     exit 0

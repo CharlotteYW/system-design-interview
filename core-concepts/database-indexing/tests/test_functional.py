@@ -20,6 +20,23 @@ def test_ui_explains_the_three_queries() -> None:
         assert "Index Only Scan" in text
         assert "user_id, created_at" in text
         assert "June 1 only" in text
+        assert 'id="lsm"' in text
+        assert 'id="lsm-log"' in text
+        assert 'id="geo-log"' in text
+        assert 'id="geo"' in text
+        assert 'id="geo-code"' in text
+        assert "index code" in text
+        assert 'id="search"' in text
+        assert 'id="fullscan"' in text
+        assert 'id="word-log"' in text
+        assert "Full search" in text
+        assert "memtable" in text
+        assert "within 200 meters" in text
+        assert "idx_lat" in text
+        assert "idx_lng" in text
+        assert "Geohash" in text
+        assert "Quadtree" in text
+        assert "word" in text.lower()
 
 
 def test_ui_flow_create_index_and_explain_date() -> None:
