@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Consistent hashing</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; }
+      button { font: inherit; padding: 0.35rem 0.6rem; }
+      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; }
+      code { font-family: ui-monospace, monospace; }
+    </style>
+  </head>
+  <body>
+    <h1>Consistent hashing</h1>
+    <p>
+      A key belongs to the <strong>next server clockwise</strong> on a ring.
+      Adding a server takes only the arc in front of it.
+      <code>hash(key) % N</code> changes the divisor, so most keys move.
+      Virtual nodes are many points per server so those arcs stay small.
+      One hot key still has one owner.
+    </p>
+    <h2>The circle 0–100</h2>
+    <p>A at 0, B at 40, C at 70. Keys: k1=10, k2=50, k3=80. Then add D at 55.</p>
+    <button id="example" type="button">Who moves when D is added?</button>
+    <h2>Many keys</h2>
+    <p>Start with 4 servers and 1000 keys. Add a 5th. Compare <code>hash % N</code> with a ring of 100 virtual nodes per server.</p>
+    <button id="compare" type="button">Count keys that move</button>
+    <pre id="out">Results show up here.</pre>
+    <script>
+      const out = document.querySelector("#out");
+      document.querySelector("#example").onclick = async () => {
+        const body = await fetch("/api/example").then((r) => r.json());
+        const lines = body.keys.map((row) =>
+          `${row.key}@${row.position}: ${row.before} → ${row.after}${row.moved ? " MOVED" : ""}`);
+        lines.push("moved: " + body.moved.join(", "));
+        out.textContent = lines.join("\n");
+      };
+      document.querySelector("#compare").onclick = async () => {
+        const body = await fetch("/api/compare").then((r) => r.json());
+        out.textContent = [
+          `${body.keys} keys, ${body.servers_before} servers, then one more`,
+          `hash % N moved ${body.mod_moved} (${body.mod_fraction})`,
+          `ring + ${body.vnodes} vnodes moved ${body.ring_moved} (${body.ring_fraction})`,
+        ].join("\n");
+      };
+    </script>
+  </body>
+</html>

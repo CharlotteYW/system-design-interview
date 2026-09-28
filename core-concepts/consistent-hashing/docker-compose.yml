@@ -1,9 +1,16 @@
-# Local demo skeleton. Fill when this concept is prompted.
-# Default study stack: Python/FastAPI. Add Postgres, Redis, MinIO, Kafka, nginx
-# only if that concept actually needs them.
-
-# services:
-#   app:
-#     build: .
-#     ports:
-#       - "8000:8000"
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12

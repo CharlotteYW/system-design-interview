@@ -6,6 +6,8 @@ CONCEPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${REPO_ROOT}/scripts/use-venv.sh"
 
-echo "Not implemented yet."
-echo "When this concept is prompted, this script will check the user-visible demo in ${CONCEPT_DIR}."
-exit 1
+cd "${CONCEPT_DIR}"
+export HASHING_BASE_URL="${HASHING_BASE_URL:-http://localhost:8000}"
+
+echo "Functional tests against ${HASHING_BASE_URL}"
+python -m pytest tests/test_functional.py -v

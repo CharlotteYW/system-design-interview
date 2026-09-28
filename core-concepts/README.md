@@ -14,6 +14,6 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | 4 | Database Indexing | [database-indexing](database-indexing/) | Implemented |
 | 5 | Caching | [caching](caching/) | Implemented |
 | 6 | Sharding | [sharding](sharding/) | Stub |
-| 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Stub |
+| 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Implemented |
 | 8 | CAP Theorem | [cap-theorem](cap-theorem/) | Stub |
 | 9 | Numbers to Know | [numbers-to-know](numbers-to-know/) | Notes-only |
