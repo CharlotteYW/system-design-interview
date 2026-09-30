@@ -6,9 +6,8 @@ QUESTION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${REPO_ROOT}/scripts/use-venv.sh"
 
-echo "Not implemented yet."
-echo "When this question is prepared, this script will run black-box scenarios against the running stack:"
-echo "  - happy path"
-echo "  - at least one failure / rejection path"
-echo "  - at least one scale-ish or concurrency edge"
-exit 1
+cd "${QUESTION_DIR}"
+export KV_BASE_URL="${KV_BASE_URL:-http://localhost:8000}"
+
+echo "Integration tests against ${KV_BASE_URL}"
+python -m pytest tests/test_scenarios.py -v

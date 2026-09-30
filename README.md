@@ -74,7 +74,7 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | 1 | URL shortener (Bitly) | [questions/url-shortener](questions/url-shortener/) | Hello Interview · Alex Xu Vol 1 Ch 8 · **Implemented** |
 | 2 | Rate limiter | [questions/rate-limiter](questions/rate-limiter/) | Hello Interview · Alex Xu Vol 1 Ch 4 · **Implemented** |
 | 3 | Unique ID generator | [questions/unique-id-generator](questions/unique-id-generator/) | Alex Xu Vol 1 Ch 7 |
-| 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 |
+| 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 · **Implemented** |
 | 5 | Notification system | [questions/notification-system](questions/notification-system/) | Hello Interview · Alex Xu Vol 1 Ch 10 |
 | 6 | News feed | [questions/news-feed](questions/news-feed/) | Hello Interview (FB News Feed) · Alex Xu Vol 1 Ch 11 |
 | 7 | Chat system (WhatsApp) | [questions/chat-system](questions/chat-system/) | Hello Interview · Alex Xu Vol 1 Ch 12 |
@@ -103,7 +103,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | LeetCode | Medium | listed | |
 | WhatsApp | Medium | [Stub](questions/chat-system/) | |
 | Strava | Medium | listed | |
-| Distributed Cache | Medium | [Stub](questions/key-value-store/) | |
+| Distributed Cache | Medium | [Implemented](questions/key-value-store/) | |
 | Rate Limiter | Medium | [Implemented](questions/rate-limiter/) | |
 | Online Auction | Medium | listed | |
 | YouTube | Medium | [Stub](questions/youtube/) | |
@@ -135,7 +135,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | --- | --- | --- |
 | 4 | Rate limiter | [Implemented](questions/rate-limiter/) |
 | 5 | Consistent hashing | listed |
-| 6 | Key-value store | [Stub](questions/key-value-store/) |
+| 6 | Key-value store | [Implemented](questions/key-value-store/) |
 | 7 | Unique ID generator | [Stub](questions/unique-id-generator/) |
 | 8 | URL shortener | [Implemented](questions/url-shortener/) |
 | 9 | Web crawler | [Stub](questions/web-crawler/) |

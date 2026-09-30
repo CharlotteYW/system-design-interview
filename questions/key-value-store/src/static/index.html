@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Key-value store</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; line-height: 1.45; color: #1c1917; }
+    h1 { font-size: 1.4rem; }
+    p, li { max-width: 46rem; }
+    label { display: block; margin-top: 0.8rem; font-size: 0.9rem; }
+    input, select, button { font: inherit; }
+    input[type="text"] { width: 16rem; padding: 0.3rem 0.4rem; }
+    button { margin: 0.6rem 0.4rem 0.6rem 0; padding: 0.35rem 0.7rem; }
+    #log, #state { background: #f5f5f4; padding: 0.8rem 1rem; white-space: pre-wrap; min-height: 4rem; }
+    .row { display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: end; }
+  </style>
+</head>
+<body>
+  <h1>Key-value store</h1>
+  <p>
+    The load balancer picks a server round-robin. That server is the coordinator.
+    It hashes the key onto the ring and writes three owners. Success is 2 of 3
+    acknowledgements after each owner’s write-ahead log is on disk. A get that
+    hits this coordinator’s L1 returns from that one server. A miss reads two owners.
+  </p>
+  <div class="row">
+    <label>Key <input id="key" type="text" value="user:42" /></label>
+    <label>Value <input id="value" type="text" value="hello" /></label>
+    <label>Send this call to
+      <select id="at">
+        <option value="">round-robin</option>
+        <option>A</option>
+        <option>B</option>
+        <option>C</option>
+        <option>D</option>
+        <option>E</option>
+      </select>
+    </label>
+  </div>
+  <label><input id="lag" type="checkbox" /> Leave the third replica behind</label>
+  <div>
+    <button id="put" type="button">Put</button>
+    <button id="get" type="button">Get</button>
+    <button id="delete" type="button">Delete (tombstone)</button>
+  </div>
+  <h2>This call</h2>
+  <div id="log">No call yet.</div>
+  <h2>Each server’s L1</h2>
+  <div id="state">Loading…</div>
+  <script>
+    const log = document.querySelector("#log");
+    const stateEl = document.querySelector("#state");
+    const keyInput = document.querySelector("#key");
+    const valueInput = document.querySelector("#value");
+    const atSelect = document.querySelector("#at");
+    const lagBox = document.querySelector("#lag");
+
+    function query() {
+      const params = new URLSearchParams();
+      if (atSelect.value) params.set("at", atSelect.value);
+      if (lagBox.checked) params.set("lag_third", "true");
+      const text = params.toString();
+      return text ? `?${text}` : "";
+    }
+
+    function explain(body) {
+      const lines = [`Coordinator ${body.coordinator} accepted the ${body.op}.`];
+      if (body.l1 === "hit") {
+        lines.push("L1 hit on that server. The ring was not used. No replica was read.");
+      } else if (body.l1 === "miss") {
+        lines.push(`L1 miss. Key point ${body.key_point}. Owners ${body.preference.join(", ")}.`);
+        lines.push(`Read two owners: ${body.replica_reads.join(", ")}. Stored the newer version in this coordinator's L1.`);
+      } else {
+        lines.push(`Key point ${body.key_point}. Owners ${body.preference.join(", ")}.`);
+        lines.push(`Acks (log on disk): ${body.acks.join(", ")}.`);
+        if (body.skipped.length) lines.push(`Did not apply this call: ${body.skipped.join(", ")}.`);
+        lines.push(`L1 set to version ${body.version} on ${body.l1_updates.join(", ")}.`);
+        lines.push("Any other server keeps its previous L1 until the one-second TTL.");
+      }
+      if (body.tombstone) lines.push("Tombstone: a later get of this version finds the key gone.");
+      else if (body.found === false) lines.push("Not found.");
+      else if (body.value != null) lines.push(`Value ${body.value} (version ${body.version}).`);
+      return lines.join("\n");
+    }
+
+    async function refresh() {
+      const body = await (await fetch("/api/state")).json();
+      const blocks = body.servers.map((server) => {
+        const rows = server.l1.length
+          ? server.l1.map((row) => `${row.key}=${row.tombstone ? "tombstone" : row.value} v${row.version} (${row.ttl_left_ms} ms)`).join(", ")
+          : "(empty)";
+        const status = server.alive ? "up" : "down";
+        return `${server.name} @ ${server.position} ${status}  memtable ${server.memtable_keys.length}  sstables ${server.sstable_count}\n  L1: ${rows}`;
+      });
+      stateEl.textContent = blocks.join("\n");
+    }
+
+    async function call(method) {
+      const key = encodeURIComponent(keyInput.value);
+      const opts = { method };
+      if (method === "PUT") {
+        opts.headers = { "Content-Type": "application/json" };
+        opts.body = JSON.stringify({ value: valueInput.value });
+      }
+      const response = await fetch(`/v1/keys/${key}${query()}`, opts);
+      const body = await response.json();
+      log.textContent = response.ok ? explain(body) : body.detail || JSON.stringify(body);
+      await refresh();
+    }
+
+    document.querySelector("#put").onclick = () => call("PUT");
+    document.querySelector("#get").onclick = () => call("GET");
+    document.querySelector("#delete").onclick = () => call("DELETE");
+    refresh();
+  </script>
+</body>
+</html>
