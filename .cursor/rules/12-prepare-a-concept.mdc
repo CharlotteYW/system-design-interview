@@ -7,7 +7,7 @@ alwaysApply: true
 
 When the user names a **core concept** or **key technology** (folder under `core-concepts/` or `key-technologies/`):
 
-0. **Commit first** (`04-commit-before-question.mdc`). Clean tree before touching that topic.
+0. **Commit and push first** (`04-commit-before-question.mdc`). Clean tree, not ahead of the remote, before touching that topic.
 1. Use that slug’s folder (already stubbed). Do **not** use the five-step product-interview pattern (`06-interview-pattern.mdc`).
 2. **Teach first in the README.** The job is to explain the idea: what it is, every important variant, when each wins, pitfalls, interview default. Original notes only; link Hello Interview / cite Alex Xu.
 3. **Collaborate.** Let the user try explaining; then teach (`08-teach-after-each-answer.mdc`: options, tradeoffs, choice). Record Q&A in that README’s Session notes.

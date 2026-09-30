@@ -9,7 +9,7 @@ Learn by designing a system in interview style, then implementing a **simplified
 Follow `.cursor/rules/` in order:
 
 1. `00-repo-purpose.mdc` — study by building, original notes only
-2. `04-commit-before-question.mdc` — commit previous work; require a clean git tree
+2. `04-commit-before-question.mdc` — commit and push previous work; require a clean tree that is not ahead of the remote
 3. `06-interview-pattern.mdc` — five steps: scope, high-level, deep dive, special situations, summary
 4. `08-teach-after-each-answer.mdc` — after each user answer: analyze, options, tradeoffs, why we chose this; then implementation wrap-up
 5. `01-prepare-a-question.mdc` — interview delivery + implement locally

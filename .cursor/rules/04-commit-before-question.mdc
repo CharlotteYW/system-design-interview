@@ -1,16 +1,17 @@
 ---
-description: Commit previous work and require a clean git tree before starting a question
+description: Commit and push previous work before starting a question or concept
 alwaysApply: true
 ---
 
-# Commit before each question or concept
+# Commit and push before each question or concept
 
-Before preparing or implementing a **question**, **core concept**, or **key technology**, the git working tree must be **clean**.
+Before preparing or implementing a **question**, **core concept**, or **key technology**, previous work must be **committed and pushed**. Do not start the new chapter on a dirty tree or on commits that exist only locally.
 
 1. Run `git status`.
 2. If there are uncommitted changes from previous work, **commit them first** (stage the relevant files, write a message about that prior work, commit). Do not include `.env` or secrets.
 3. Re-run `git status` and continue only when it reports a clean tree.
 4. Do **not** mix the new question or concept files into that pre-question commit.
 5. If the commit fails (hooks, conflicts), stop and fix. Do not start the new question on a dirty tree.
+6. If the branch is ahead of its remote, **push** (`git push`). Do not force-push. If the push fails, stop and fix. Do not start the new chapter until the remote has these commits.
 
-If status is already clean, skip the commit and start the question.
+If status is already clean and the branch is not ahead of the remote, skip the commit and the push and start the question.

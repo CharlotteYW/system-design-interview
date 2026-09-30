@@ -7,7 +7,7 @@ alwaysApply: true
 
 When the user names a question (existing slug or new):
 
-0. **Commit first.** Follow `04-commit-before-question.mdc`: previous work must be committed and `git status` must be clean before any new question files are touched.
+0. **Commit and push first.** Follow `04-commit-before-question.mdc`: previous work must be committed, pushed, and `git status` must be clean before any new question files are touched.
 1. **Locate or create the folder.** If `questions/<slug>/` is missing, copy `_templates/question/` there, replace `{{QUESTION_TITLE}}`, `{{SOURCES}}`, `{{SLUG}}`, and add a row to the root README index.
 2. **Guide the design** using `06-interview-pattern.mdc`. The user answers each step. After **each** of their answers, follow `08-teach-after-each-answer.mdc` before moving on:
    1. Requirements and design scope
