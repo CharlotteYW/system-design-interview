@@ -83,7 +83,7 @@ Postgres on each ring server is a real alternative, and it is not “three datab
 
 ### Deep dives
 
-1. **Put on one server.** The write is appended to a write-ahead log and inserted into the memtable. The replica acknowledges only after that log is on disk. A later flush turns the memtable into an SSTable. Acknowledging from RAM alone loses the put on a crash, which breaks the step-1 rule.
+1. **Put on one server.** The write is appended to a write-ahead log and inserted into the memtable. The replica acknowledges only after that log is on disk. A later flush turns the memtable into an SSTable. Acknowledging from RAM alone loses the put on a crash, which breaks the step-1 rule. A replica read checks the memtable, then each SSTable from newest to oldest. A bloom filter on each SSTable says “this key is definitely absent,” so that file is skipped. A “maybe” still uses the sparse index and may read the file. The coordinator’s L1 sits in front of this path. A hot-key hit never opens an SSTable.
 2. **Two copies disagree.** Get already asked 2 of 3. It returns the **newer version**, including when one server is dead and the two survivors differ. That difference is usually lag: one copy has the new put, the other still has the previous one. Returning an error in that case fails the get that replication was meant to save. Two different values with the **same** version are a real conflict. This interview uses last-write-wins on the timestamp. A vector clock, which hands both values back to the client, is the alternative when two writers must not silently overwrite each other.
 3. **Add a server.** Consistent hashing moves only the arc the new server takes. The previous owner streams that key range to the new server. The other keys stay put. A background compare of the two copies (a Merkle tree is the usual tool) finds any key the stream missed.
 
@@ -115,7 +115,7 @@ Five servers (A–E) in one process. Each has a write-ahead log and a memtable o
 
 - **Who coordinated.** The log names the server that accepted the call, the key’s point on the ring, and the three owners. A get that hits L1 says the ring was not used.
 - **Hot key.** The first get on a server is a miss and names the two owners it read. The next get on that same server is a hit. A put sets the new version on the coordinator and on the owners that applied it. A server that missed the put still shows the old value in its L1 until the TTL.
-- **Cut.** One process pretends to be the load balancer and all five servers. There is no separate Postgres and no real network timeout. The third replica is skipped only when “Leave the third replica behind” is checked. Per-key expiry, a second region, and vector clocks are not in the app.
+- **Cut.** One process pretends to be the load balancer and all five servers. There is no separate Postgres and no real network timeout. The third replica is skipped only when “Leave the third replica behind” is checked. Per-key expiry, a second region, and vector clocks are not in the app. Each SSTable has a bloom filter. A miss names files the filter skipped. “Show a bloom skip” writes enough keys to flush two files, then reads an older key.
 
 - Setup: `./scripts/setup.sh`
 - Integration: `./scripts/run-scenarios.sh` — put/get, L1 hit, stale outsider, one owner down, two owners down, tombstone, eight parallel puts
@@ -215,6 +215,43 @@ A (user): that summary.
 Taught: the path is right. Success is two of three logs. A tombstone carries a newer version. The one-second stale read is the everyday risk. Region loss is the outage we accepted. Durable per-key expiry is a later feature, replicated like the value, and it is a different timer from the L1. The local page shows the coordinator, the three owners, an L1 hit, and a server that still has the old value.
 
 **2026-09-29 close.** The page was exercised (put through A, get miss on B). No further questions. Stack stopped with `./scripts/stop.sh`. Start again with `./scripts/setup.sh`.
+
+**Q: Do we add a bloom filter to speed up reads?**  
+A (user): asking whether the read path needs one.
+
+Taught: yes, on each replica, one filter per SSTable. A quorum read checks the memtable, then asks each filter before opening a file. “Absent” skips the file. “Maybe” can be wrong and still costs a read. The coordinator L1 stays in front, so a hot-key hit never reaches the filter. The lab now flushes a 256-bit filter with each SSTable. The page’s “Show a bloom skip” reads an older key and names the file that was skipped.
+
+**Q: Is the bloom filter on the coordinator, on each server, or both? Does the write path update it, and can the app show that?**  
+A (user): expecting the write path to update the filter, and asking where the demo is.
+
+Taught: one filter per SSTable on the server that stores that file. A coordinator uses those filters only when it is also one of the owners being read. A put updates the log and the memtable. The filter is filled at flush and then left immutable. “Show a bloom skip” is the demo.
+
+**Q: The filter is created when the memtable flushes, and every server uses it to skip a key that is not in the store?**  
+A (user): checking both halves.
+
+Taught: the flush creates that file’s filter, and the filter is not edited later. Each server filters only its own SSTables. Absent skips that one file. The key may still be in the memtable, in another file, or on another replica.
+
+**Q: A get of a deleted key returns a tombstone, none, or a special keyword?**  
+A (user): choosing among those three.
+
+Taught: the caller receives not found and no value. Replicas keep a tombstone with a newer version so repair cannot copy the old value back. The lab also sets `tombstone: true` on the JSON. The value itself is empty.
+
+**Q: Why can’t delete just remove the key and store nothing?**  
+A (user): the repair story was unclear.
+
+Taught: erasing leaves no record, so a replica that missed the delete still holds the old value and repair copies it back. A tombstone is a newer version with an empty value. Repair copies that version onto the late replica. The caller still sees not found. The tombstone has to remain until that late replica has seen it.
+
+**Q: A key missing from the SSTables is still in the memtable? Does a bloom-only read miss it, or is the memtable checked first?**  
+A (user): asking which check comes first.
+
+Taught: keys written after the last flush exist only in the memtable, and no filter lists them yet. A bloom-only read would report them missing. This design checks the memtable first, then each file’s filter.
+
+**Q: The filter is not updated on the put. That is the point to keep.**  
+A (user): that sentence is the one that landed.
+
+Taught: locked. A put updates the log and the memtable only. The filter for a file is created at flush, then left unchanged. The memtable is why a read still finds a key that no filter lists yet.
+
+**2026-09-29 close, continued.** Bloom filter, tombstone repair, and memtable-before-filter are understood. No further questions. Stack stopped with `./scripts/stop.sh`.
 
 ## Interview checklist
 

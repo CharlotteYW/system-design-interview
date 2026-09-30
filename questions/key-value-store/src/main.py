@@ -34,6 +34,14 @@ def _fail(exc: Exception) -> HTTPException:
     return HTTPException(status_code=status, detail=str(exc))
 
 
+@app.post("/api/bloom-demo")
+def bloom_demo() -> dict:
+    try:
+        return cluster.bloom_demo(_now())
+    except RuntimeError as exc:
+        raise _fail(exc) from exc
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}

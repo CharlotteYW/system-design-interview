@@ -134,6 +134,17 @@ def test_delete_is_a_tombstone() -> None:
         assert got.json()["l1"] == "hit"
 
 
+def test_bloom_filter_skips_an_older_files_neighbor() -> None:
+    with client() as http:
+        demo = http.post("/api/bloom-demo")
+        assert demo.status_code == 200
+        body = demo.json()
+        assert body["l1"] == "miss"
+        files = [item for read in body["bloom"] for item in read["files"]]
+        assert any(item["bloom"] == "absent" for item in files)
+        assert any(item.get("found") for item in files)
+
+
 def test_parallel_puts_keep_a_version() -> None:
     def write(i: int) -> int:
         with client() as http:

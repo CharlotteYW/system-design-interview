@@ -95,3 +95,23 @@ Taught: the path is right. Success is two of three owners, and the third can sti
 A: Five servers live in one process. A put from the page names the coordinator, the three owners, and which L1 maps moved to the new version. A second get on that same server is a hit and reads no replica. A server left out of the put keeps the old value until the one-second TTL. Two owners down returns an error. The third replica lag, a real network, and per-key expiry are not running.
 
 **2026-09-29.** Lab tested in the browser. No further questions. Stack stopped.
+
+**Q: Should the key-value store include a bloom filter on the read path?**  
+A: Yes, on each replica, one bloom filter per SSTable. After the memtable miss, the filter skips files that cannot contain the key. A positive answer can be wrong, so the sparse index is still checked. It does not sit on the coordinator. An L1 hit never opens an SSTable. The lab builds a 256-bit filter when a memtable flushes. “Show a bloom skip” reads an older key and names the file the filter skipped.
+
+**Q: Does the bloom filter live on the coordinator, on each server, or both? Does a put update it? Where does the app show it?**  
+A: Each server has one filter per SSTable it stores. The coordinator does not keep a second filter for the whole cluster. A put appends the log and the memtable. The filter is built once, when that memtable is flushed, and that file never changes. A later read checks the memtable before any filter. The button “Show a bloom skip” on the page runs that read and names the skipped file.
+
+**Q: Is the filter built when the memtable flushes, and does every server use it to skip a key that is not in the store?**  
+A: Yes, the filter for a file is created at flush. Each server has filters only for its own SSTables. Absent means “not in this file,” so that file is skipped. The key can still be in the memtable, in another SSTable on that server, or on another replica. Only after the memtable and every file on that server say the key is missing does that one server report it absent.
+
+**Q: When a get reads a deleted key, is the result a tombstone, none, or a special keyword?**  
+A: The caller gets “not found” and no value. The replicas store a tombstone: an empty value and a version newer than the put it removes. The lab’s JSON includes `found: false`, `value: null`, and `tombstone: true` so the page can show the marker. A client API would treat that as a missing key. The word “tombstone” is not the stored value.
+
+**Q: If a key is not in an SSTable, is it still in the memtable? Would a bloom-only read miss it, or do we check the memtable first?**  
+A: A key written since the last flush is only in the memtable. No bloom filter contains it yet, because the filter is built at flush. Checking filters first and trusting “absent” would miss that key. The read checks the memtable first. Filters run only after that miss, and each filter applies to one file.
+
+**Q: Why not erase the key on delete and store nothing?**  
+A: A down replica still has the old value. After an erase, the live replicas have no record, which looks the same as “this key was never here.” Repair copies the surviving value back, and the delete is undone. A tombstone is a newer record that says deleted, so repair copies that record onto the replica that was down. The caller still receives not found.
+
+**2026-09-29 close.** Bloom filter and tombstone repair understood. No further questions. Stack stopped.

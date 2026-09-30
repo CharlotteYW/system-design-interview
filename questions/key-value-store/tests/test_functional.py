@@ -22,6 +22,8 @@ def test_page_shows_coordinator_and_l1() -> None:
         assert "L1" in text
         assert "tombstone" in text
         assert "2 of 3" in text
+        assert 'id="bloom"' in text
+        assert "bloom filter" in text
 
 
 def test_page_api_put_and_get() -> None:

@@ -8,7 +8,7 @@ Pieces we actually name. A cluster-wide primary database, a queue, and a CDN are
 | Load balancer | Round-robin across healthy servers | Picks who accepts the HTTP call. Does not hash the key |
 | Coordinator | The server that accepted this call | Hashes the key, writes and reads 2 of 3, returns the newer version. Any server can do this |
 | L1 cache | A map inside each server that accepts calls | Hot-key gets. A hit returns from this process. A miss reads two replicas and fills this map. A put sets the new version on the coordinator and on each replica that applied the write. Other servers keep the old entry until the TTL |
-| Replica | One server on the preference list | Appends a write-ahead log, keeps a memtable, flushes SSTables. Holds its own slice plus copies of its neighbors |
+| Replica | One server on the preference list | Appends a write-ahead log, keeps a memtable, flushes SSTables. Each SSTable has a bloom filter so a read can skip files that do not contain the key. Holds its own slice plus copies of its neighbors |
 | Ring | Consistent hash of keys and servers | Preference list is the owner and the next two clockwise. Adding a server moves one arc |
 | Tombstone | A replicated delete record | Newer than the value it removes. Stops a late replica from restoring the key |
 | Shared cache | One Redis | Optional at about 40,000 gets/s of one key. One box, so it does not cover 400,000 gets/s |

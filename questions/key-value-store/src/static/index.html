@@ -22,6 +22,7 @@
     It hashes the key onto the ring and writes three owners. Success is 2 of 3
     acknowledgements after each owner’s write-ahead log is on disk. A get that
     hits this coordinator’s L1 returns from that one server. A miss reads two owners.
+    Each owner checks a bloom filter before opening an SSTable. Absent skips that file.
   </p>
   <div class="row">
     <label>Key <input id="key" type="text" value="user:42" /></label>
@@ -42,6 +43,7 @@
     <button id="put" type="button">Put</button>
     <button id="get" type="button">Get</button>
     <button id="delete" type="button">Delete (tombstone)</button>
+    <button id="bloom" type="button">Show a bloom skip</button>
   </div>
   <h2>This call</h2>
   <div id="log">No call yet.</div>
@@ -70,6 +72,19 @@
       } else if (body.l1 === "miss") {
         lines.push(`L1 miss. Key point ${body.key_point}. Owners ${body.preference.join(", ")}.`);
         lines.push(`Read two owners: ${body.replica_reads.join(", ")}. Stored the newer version in this coordinator's L1.`);
+        for (const read of body.bloom || []) {
+          if (read.memtable) {
+            lines.push(`${read.server}: key is in the memtable. Bloom filters were not checked.`);
+          } else if (!read.files.length) {
+            lines.push(`${read.server}: no SSTable was opened.`);
+          } else {
+            const parts = read.files.map((file) => {
+              if (file.bloom === "absent") return `${file.name} bloom absent, file skipped`;
+              return `${file.name} bloom maybe${file.found ? ", key is in this file" : ", key is not in this file"}`;
+            });
+            lines.push(`${read.server}: ${parts.join("; ")}.`);
+          }
+        }
       } else {
         lines.push(`Key point ${body.key_point}. Owners ${body.preference.join(", ")}.`);
         lines.push(`Acks (log on disk): ${body.acks.join(", ")}.`);
@@ -90,7 +105,8 @@
           ? server.l1.map((row) => `${row.key}=${row.tombstone ? "tombstone" : row.value} v${row.version} (${row.ttl_left_ms} ms)`).join(", ")
           : "(empty)";
         const status = server.alive ? "up" : "down";
-        return `${server.name} @ ${server.position} ${status}  memtable ${server.memtable_keys.length}  sstables ${server.sstable_count}\n  L1: ${rows}`;
+        const files = (server.sstables || []).map((table) => `${table.name} ${table.keys.length} keys, bloom ${table.bloom_bits}/${table.bloom_size}`).join("; ") || "none";
+        return `${server.name} @ ${server.position} ${status}  memtable ${server.memtable_keys.length}  sstables ${server.sstable_count} (${files})\n  L1: ${rows}`;
       });
       stateEl.textContent = blocks.join("\n");
     }
@@ -111,6 +127,12 @@
     document.querySelector("#put").onclick = () => call("PUT");
     document.querySelector("#get").onclick = () => call("GET");
     document.querySelector("#delete").onclick = () => call("DELETE");
+    document.querySelector("#bloom").onclick = async () => {
+      const response = await fetch("/api/bloom-demo", { method: "POST" });
+      const body = await response.json();
+      log.textContent = response.ok ? explain(body) : (body.detail || JSON.stringify(body));
+      await refresh();
+    };
     refresh();
   </script>
 </body>

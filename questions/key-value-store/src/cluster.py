@@ -17,11 +17,39 @@ SERVERS = (
 )
 RING = 100
 FLUSH_AT = 4
+BLOOM_BITS = 256
+BLOOM_HASHES = 3
 
 
 def key_point(key: str) -> int:
     digest = md5(key.encode("utf-8")).hexdigest()
     return int(digest[:8], 16) % RING
+
+
+class Bloom:
+    """Per-SSTable filter. Absent is final. Maybe can be wrong."""
+
+    def __init__(self, bits: list[int] | None = None) -> None:
+        self.nbits = BLOOM_BITS
+        self.bits = list(bits) if bits is not None else [0] * BLOOM_BITS
+
+    def add(self, key: str) -> None:
+        for index in self._indexes(key):
+            self.bits[index] = 1
+
+    def maybe(self, key: str) -> bool:
+        return all(self.bits[index] for index in self._indexes(key))
+
+    def _indexes(self, key: str) -> list[int]:
+        digest = md5(key.encode("utf-8")).hexdigest()
+        return [int(digest[i * 8 : i * 8 + 8], 16) % self.nbits for i in range(BLOOM_HASHES)]
+
+
+class SSTable:
+    def __init__(self, name: str, records: dict[str, dict], bloom: Bloom) -> None:
+        self.name = name
+        self.records = records
+        self.bloom = bloom
 
 
 class Node:
@@ -33,13 +61,22 @@ class Node:
         self.dir = root / name
         self.dir.mkdir(parents=True, exist_ok=True)
         self.memtable: dict[str, dict] = {}
-        self.sstables: list[dict[str, dict]] = []
+        self.sstables: list[SSTable] = []
         self.l1: dict[str, dict] = {}
         self._load()
 
     def _load(self) -> None:
         for path in sorted(self.dir.glob("sst-*.json")):
-            self.sstables.append(json.loads(path.read_text()))
+            payload = json.loads(path.read_text())
+            if isinstance(payload, dict) and "records" in payload:
+                records = payload["records"]
+                bloom = Bloom(payload.get("bloom"))
+            else:
+                records = payload
+                bloom = Bloom()
+                for key in records:
+                    bloom.add(key)
+            self.sstables.append(SSTable(path.stem, records, bloom))
         wal = self.dir / "wal.log"
         if not wal.exists():
             return
@@ -64,20 +101,32 @@ class Node:
         if not self.memtable:
             return
         n = len(list(self.dir.glob("sst-*.json")))
-        (self.dir / f"sst-{n}.json").write_text(json.dumps(self.memtable))
-        self.sstables.append(dict(self.memtable))
+        name = f"sst-{n}"
+        bloom = Bloom()
+        for key in self.memtable:
+            bloom.add(key)
+        payload = {"records": self.memtable, "bloom": bloom.bits}
+        (self.dir / f"{name}.json").write_text(json.dumps(payload))
+        self.sstables.append(SSTable(name, dict(self.memtable), bloom))
         self.memtable.clear()
         wal = self.dir / "wal.log"
         if wal.exists():
             wal.unlink()
 
-    def read_durable(self, key: str) -> dict | None:
+    def read_durable(self, key: str) -> tuple[dict | None, dict]:
+        trace: dict = {"server": self.name, "memtable": False, "files": []}
         if key in self.memtable:
-            return self.memtable[key]
+            trace["memtable"] = True
+            return self.memtable[key], trace
         for table in reversed(self.sstables):
-            if key in table:
-                return table[key]
-        return None
+            if not table.bloom.maybe(key):
+                trace["files"].append({"name": table.name, "bloom": "absent"})
+                continue
+            found = key in table.records
+            trace["files"].append({"name": table.name, "bloom": "maybe", "found": found})
+            if found:
+                return table.records[key], trace
+        return None, trace
 
     def set_l1(self, key: str, rec: dict, now: float) -> None:
         self.l1[key] = {
@@ -116,6 +165,15 @@ class Node:
             "alive": self.alive,
             "memtable_keys": sorted(self.memtable),
             "sstable_count": len(self.sstables),
+            "sstables": [
+                {
+                    "name": table.name,
+                    "keys": sorted(table.records),
+                    "bloom_bits": sum(table.bloom.bits),
+                    "bloom_size": table.bloom.nbits,
+                }
+                for table in self.sstables
+            ],
             "l1": rows,
         }
 
@@ -226,22 +284,19 @@ class Cluster:
                     "tombstone": cached["tombstone"],
                 }
             owners = self.preference(key)
-            reads: list[tuple[str, dict]] = []
+            reads: list[tuple[str, dict, dict]] = []
             for name in owners:
                 node = self.nodes[name]
                 if not node.alive:
                     continue
-                rec = node.read_durable(key) or {
-                    "value": None,
-                    "version": 0,
-                    "tombstone": True,
-                }
-                reads.append((name, rec))
+                rec, trace = node.read_durable(key)
+                rec = rec or {"value": None, "version": 0, "tombstone": True}
+                reads.append((name, rec, trace))
                 if len(reads) == 2:
                     break
             if len(reads) < 2:
                 raise RuntimeError("quorum failed")
-            _name, best = max(reads, key=lambda item: item[1]["version"])
+            _name, best, _trace = max(reads, key=lambda item: item[1]["version"])
             if best["version"] == 0:
                 best = {"value": None, "version": 0, "tombstone": True}
             coord.set_l1(key, best, now)
@@ -252,12 +307,39 @@ class Cluster:
                 "key_point": key_point(key),
                 "l1": "miss",
                 "preference": owners,
-                "replica_reads": [name for name, _ in reads],
+                "replica_reads": [name for name, _, _ in reads],
+                "bloom": [trace for _, _, trace in reads],
                 "found": not best["tombstone"],
                 "value": None if best["tombstone"] else best["value"],
                 "version": best["version"],
                 "tombstone": best["tombstone"],
             }
+
+    def bloom_demo(self, now: float) -> dict:
+        """Write enough keys that one replica has two SSTables, then read an older key."""
+        for index in range(40):
+            key = f"bf-{index}"
+            self.put(key, "v", False, now, at="A")
+            snapshot = self.state(now)
+            for server in snapshot["servers"]:
+                tables = server["sstables"]
+                if len(tables) < 2:
+                    continue
+                newest = set(tables[-1]["keys"])
+                mem = set(server["memtable_keys"])
+                for older in tables[:-1]:
+                    for old_key in older["keys"]:
+                        if old_key in newest or old_key in mem:
+                            continue
+                        if server["name"] not in self.preference(old_key)[:2]:
+                            continue
+                        owners = set(self.preference(old_key))
+                        outsider = next(name for name in self.order if name not in owners and name != "A")
+                        body = self.get(old_key, now, at=outsider)
+                        body["demo_server"] = server["name"]
+                        body["demo_key"] = old_key
+                        return body
+        raise RuntimeError("could not build two SSTables")
 
     def set_alive(self, name: str, alive: bool) -> None:
         with self._lock:
