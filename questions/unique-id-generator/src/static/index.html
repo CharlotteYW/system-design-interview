@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Unique ID generator</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, sans-serif; margin: 2rem auto; max-width: 52rem; line-height: 1.45; color: #1c1917; }
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.1rem; margin-top: 1.6rem; }
+    p, li { max-width: 48rem; }
+    button { font: inherit; margin: 0.4rem 0.4rem 0.4rem 0; padding: 0.35rem 0.7rem; }
+    pre { background: #f5f5f4; padding: 0.8rem 1rem; white-space: pre-wrap; }
+    code, .mono { font-family: ui-monospace, monospace; font-size: 0.92em; }
+    .time { background: #e0f2fe; }
+    .server { background: #fde68a; }
+    .seq { background: #dcfce7; }
+    .layout { font-family: ui-monospace, monospace; font-size: 1rem; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <h1>Unique ID generator</h1>
+  <p>
+    Four ways to mint an ID. Each button runs servers A and B and prints the steps.
+    The 64-bit generator is the one this chapter keeps. The others show what it avoids.
+  </p>
+
+  <h2>Database counter</h2>
+  <ol>
+    <li>Server A or B asks Postgres for <code>nextval('id_seq')</code>.</li>
+    <li>Postgres adds one to the sequence and returns that integer. The next caller cannot receive it.</li>
+    <li>That integer is the ID. There is no timestamp and no worker number inside it.</li>
+  </ol>
+  <button id="counter" type="button">Generate with the counter</button>
+
+  <h2>Ticket ranges</h2>
+  <ol>
+    <li>Each server keeps a small block in memory. This lab uses blocks of 4.</li>
+    <li>When the block is empty, the server asks Postgres to reserve the next 4 integers and moves the global cursor past them.</li>
+    <li>Further IDs are handed out from memory until the block is used. A crash throws away the unused tail.</li>
+  </ol>
+  <button id="ticket" type="button">Generate with ticket blocks</button>
+
+  <h2>Random UUID, version 4</h2>
+  <ol>
+    <li>The server draws 16 random bytes, 128 bits.</li>
+    <li>The high 4 bits of byte 6 are set to <code>0100</code>, so the version is 4. In the printed form that is the first character of the third group.</li>
+    <li>The high 2 bits of byte 8 are set to <code>10</code>, the RFC variant. Every other bit stays random.</li>
+    <li>No clock and no worker number are stored. Two IDs do not sort by time.</li>
+  </ol>
+  <button id="uuid" type="button">Generate a UUID v4</button>
+
+  <h2>64-bit time, worker, and sequence</h2>
+  <p>Rule. One ID is one integer of 64 bits. The top bit stays 0. The other 63 bits are three fields, high to low: 41 bits of time, 10 bits of server, 12 bits of sequence.</p>
+  <p><code>ID = (time × 2^22) + (server × 2^12) + sequence</code></p>
+  <p>This is a sum of those three numbers. The decimal digits are not pasted together. The code writes the same sum as <code>(time &lt;&lt; 22) | (server &lt;&lt; 12) | sequence</code>, because the shifts put the three fields in different bits, and adding them does not make those bits overlap.</p>
+  <p>This example prints as <strong>18 digits</strong>. The largest ID prints as 19 digits, because the top bit stays 0 and 2^63 − 1 is 9223372036854775807. There is no rule that assigns each decimal digit its own field. The digits are the base-10 spelling of that one sum.</p>
+  <pre class="layout">time      169163200000 × 4194304 = 709521886412800000
+server    0 × 4096               =                  0
+sequence  0                      =                  0
+--------------------------------   ------------------
+sum                                709521886412800000
+digit                              123456789012345678</pre>
+  <p class="layout"><span class="time">time, 41 bits</span> <span class="server">server, 10 bits</span> <span class="seq">sequence, 12 bits</span></p>
+  <ol>
+    <li>Read the clock in milliseconds. Subtract the epoch 2020-01-01. That delta uses 41 bits. It is the left part of the integer.</li>
+    <li>This server’s worker number uses the next 10 bits. It sits between the time and the sequence.</li>
+    <li>The sequence for this millisecond uses the last 12 bits. A new millisecond starts it at 0. Another ID in the same millisecond adds one, up to 4095.</li>
+    <li>Pack <code>(delta &lt;&lt; 22) | (worker &lt;&lt; 12) | sequence</code>. The sign bit stays 0 so the integer is positive.</li>
+  </ol>
+  <p>
+    Same time, same sequence 0. A is server 0. B is server 1.
+    No single decimal digit is the server. The server is those 10 bits.
+    In this pair the server change shows up in the last 5 digits.
+  </p>
+  <p class="layout">
+    A <span class="time">7095218864128</span><span class="server">00000</span><br />
+    B <span class="time">7095218864128</span><span class="server">04096</span><br />
+    <span class="time">time, same</span> <span class="server">server + sequence</span>
+  </p>
+  <p>
+    <span class="server">00000</span> is <code>0 &lt;&lt; 12</code>, server 0 and sequence 0.
+    <span class="server">04096</span> is <code>1 &lt;&lt; 12</code>, server 1 and sequence 0. <code>1 &lt;&lt; 12</code> is 4096.
+    Server 0 is present: its 10 bits are <span class="server">0000000000</span>. That value is 0, so it does not print its own digits. The last <span class="server">00000</span> is those server bits and the sequence bits, both zero, added together.
+    The sequence bits stay <span class="seq">000000000000</span>.
+    The server bits are <span class="server">0000000000</span> versus <span class="server">0000000001</span>.
+  </p>
+  <p>
+    One millisecond on server A, server 0. The base ID is <code>709521886412800000</code>.
+    Sequence 1 through 1000 adds 1 each time, so the ID is the base plus the sequence.
+    The time digits stay <span class="time">7095218864128</span>. The last five digits are the sequence.
+  </p>
+  <pre class="layout">sequence      ID
+1             709521886412800001
+2             709521886412800002
+3             709521886412800003
+10            709521886412800010
+100           709521886412800100
+1000          709521886412801000</pre>
+  <p>Every integer between those rows is also an ID from A in that same millisecond. Sequence 1000 is still under the cap of 4095.</p>
+  <button id="snowflake" type="button">Generate a 64-bit ID</button>
+
+  <h2>Clock moves backward</h2>
+  <p>
+    Server A remembers the millisecond of its last ID. If the wall clock jumps back 5 seconds,
+    the next ID keeps that millisecond and adds one to the sequence. The new integer still sorts
+    after A’s previous ID. NTP can run in the background. It is not called while minting.
+  </p>
+  <button id="clock-back" type="button">Show a clock jump of 5 seconds</button>
+
+  <h2>Worker slots</h2>
+  <p>
+    The slot table is a sign-up sheet with one row per server number, 0 through 1023.
+    A starting server writes its name on the first empty row and then uses that row number in the sum.
+    A second server finds that row taken and writes on the next row.     Two servers cannot hold the same row,
+    so they cannot put the same server number into the sum.
+    In this lab the sheet is a Python list of 1024 pairs, <code>(owner, expires)</code>, built in memory when you click the button below.
+    It is not a YAML file. In production the same 1024 rows can sit in Postgres, DynamoDB, or ZooKeeper/etcd.
+    Postgres is enough, because the sheet is written at startup, not on every ID. ZooKeeper or etcd is the usual lease, because the row disappears when the process dies.
+    The four generator buttons skip the sheet and use fixed numbers, A = 1 and B = 2.
+    The buttons above hard-code A = 1 and B = 2. This button replays the startup assignment
+    with the first free slots, 0 and 1.
+  </p>
+  <button id="lease" type="button">Show two servers taking slots</button>
+
+  <h2>One millisecond fills up</h2>
+  <p>
+    One worker can issue 4096 IDs in a single millisecond, sequence 0 through 4095.
+    The next ID waits for the following millisecond and starts the sequence at 0.
+    100,000 IDs/s is about 100 in a typical millisecond, so the bit layout stays.
+  </p>
+  <button id="overflow" type="button">Fill one millisecond</button>
+
+  <h2>One app server dies</h2>
+  <p>
+    IDs already returned stay valid. Other workers keep minting. The crash skips at most 4096 IDs,
+    the rest of that one millisecond on that server. If the server dies 1 second into a 30-second lease,
+    slot 0 then sits unused for about 29 seconds. Those unused numbers are gaps, not failed requests.
+    At 10,000 IDs/s the other servers cover that gap. The time field lasts about 69 years, so 29 seconds is small.
+    On the ticket path, the rest of the block is wasted and the next server starts after it.
+  </p>
+  <button id="server-dies" type="button">Stop server A</button>
+
+  <h2>Postgres does not answer</h2>
+  <p>
+    The counter and the ticket path both stop, because they need Postgres. The 64-bit path
+    keeps minting in memory. This button simulates the outage. The database container stays up.
+  </p>
+  <button id="postgres-down" type="button">Simulate Postgres not answering</button>
+
+  <h2>This run</h2>
+  <pre id="log">No IDs yet.</pre>
+  <script>
+    const log = document.querySelector("#log");
+
+    function render(body) {
+      const blocks = body.servers.map((server) => {
+        const ids = server.ids.map((item, index) => {
+          const steps = item.steps.map((line) => "    " + line).join("\n");
+          return `  ID ${index + 1}: ${item.value}\n${steps}`;
+        }).join("\n");
+        return `Server ${server.name}\n${ids}`;
+      });
+      return blocks.join("\n\n");
+    }
+
+    async function run(kind) {
+      const response = await fetch(`/api/generate?kind=${kind}&count=3`, { method: "POST" });
+      const body = await response.json();
+      log.textContent = response.ok ? render(body) : (body.detail || JSON.stringify(body));
+    }
+
+    async function situation(name) {
+      const response = await fetch(`/api/situations/${name}`, { method: "POST" });
+      const body = await response.json();
+      log.textContent = response.ok ? `${body.title}\n\n${body.lines.join("\n")}` : (body.detail || JSON.stringify(body));
+    }
+
+    document.querySelector("#counter").onclick = () => run("counter");
+    document.querySelector("#ticket").onclick = () => run("ticket");
+    document.querySelector("#uuid").onclick = () => run("uuid");
+    document.querySelector("#snowflake").onclick = () => run("snowflake");
+    document.querySelector("#clock-back").onclick = () => situation("clock-back");
+    document.querySelector("#lease").onclick = () => situation("lease");
+    document.querySelector("#overflow").onclick = () => situation("overflow");
+    document.querySelector("#server-dies").onclick = () => situation("server-dies");
+    document.querySelector("#postgres-down").onclick = () => situation("postgres-down");
+  </script>
+</body>
+</html>
