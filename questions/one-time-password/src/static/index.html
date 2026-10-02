@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>One-time password</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 46rem; line-height: 1.45; color: #1c1c1c; }
+    h1 { font-size: 1.6rem; }
+    section { border-top: 1px solid #ccc; padding-top: 1rem; margin-top: 1.2rem; }
+    label { display: block; margin: 0.4rem 0; }
+    input, select, button { font: inherit; padding: 0.3rem 0.5rem; }
+    button { cursor: pointer; margin-right: 0.4rem; }
+    #log, #inbox { background: #f6f4ef; padding: 0.8rem; white-space: pre-wrap; min-height: 3rem; }
+    .note { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>One-time password</h1>
+  <p class="note">
+    Generate stores a <strong>hash</strong> in Redis, queues the 6 digits, and returns
+    <strong>202</strong> with <code>expires_in</code> (600 seconds, 10 minutes).
+    The digits are not in that response. A worker delivers them to the inbox below,
+    which stands in for SMS or email. Verify runs <strong>one Lua script</strong>:
+    a match deletes the key, then the API returns <strong>200</strong> <code>{ "ok": true }</code>.
+    Five wrong guesses delete the key too. A second check of the same code gets
+    <strong>400</strong> <code>{ "ok": false }</code>.
+  </p>
+
+  <section>
+    <h2>Ask for a code</h2>
+    <label>Destination <input id="destination" value="+15551212001" /></label>
+    <label>Channel
+      <select id="channel">
+        <option value="sms">sms</option>
+        <option value="email">email</option>
+      </select>
+    </label>
+    <label>Purpose
+      <select id="purpose">
+        <option value="login">login</option>
+        <option value="payment">payment</option>
+      </select>
+    </label>
+    <button id="generate" type="button">POST /v1/otps</button>
+    <p class="note">One new code per destination per 60 seconds. Ten codes per destination per day. About ten generates per IP per minute.</p>
+  </section>
+
+  <section>
+    <h2>Inbox</h2>
+    <p class="note">This is the phone or the mailbox. It fills only after the worker sends. The generate response stays empty of digits.</p>
+    <div id="inbox">No message yet.</div>
+  </section>
+
+  <section>
+    <h2>Check the code</h2>
+    <label>Code <input id="code" inputmode="numeric" maxlength="6" placeholder="6 digits" /></label>
+    <button id="verify" type="button">POST /v1/otps/verify</button>
+    <button id="verify-twice" type="button">Submit the same code twice</button>
+  </section>
+
+  <section>
+    <h2>Situations</h2>
+    <button id="sms-down" type="button">SMS provider down</button>
+    <button id="redis-down" type="button">Redis down</button>
+    <button id="daily-full" type="button">This number already has 10 codes today</button>
+    <button id="reset" type="button">Reset lab</button>
+    <p id="flags" class="note"></p>
+  </section>
+
+  <section>
+    <h2>Response log</h2>
+    <div id="log"></div>
+  </section>
+
+  <script>
+    const logEl = document.getElementById("log");
+    const destEl = document.getElementById("destination");
+    const purposeEl = document.getElementById("purpose");
+
+    function log(line) {
+      logEl.textContent = line + "\n" + logEl.textContent;
+    }
+
+    async function post(url, body) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const text = await response.text();
+      log(response.status + " " + url + " " + text);
+      return response;
+    }
+
+    async function refreshStatus() {
+      const response = await fetch("/api/status");
+      const body = await response.json();
+      document.getElementById("flags").textContent =
+        "Redis down: " + body.redis_down +
+        " · SMS down: " + body.sms_down +
+        " · queue depth: " + body.queue_depth;
+      document.getElementById("channel").querySelector('option[value="sms"]').disabled = body.sms_down;
+    }
+
+    async function refreshInbox() {
+      const destination = destEl.value.trim();
+      const response = await fetch("/api/inbox?destination=" + encodeURIComponent(destination));
+      if (!response.ok) {
+        document.getElementById("inbox").textContent = "Inbox unavailable (" + response.status + ").";
+        return;
+      }
+      const body = await response.json();
+      if (!body.messages.length) {
+        document.getElementById("inbox").textContent = "No message yet.";
+        return;
+      }
+      document.getElementById("inbox").textContent = body.messages.map(function (message) {
+        return message.channel + " · " + message.purpose + " · code " + message.code;
+      }).join("\n");
+    }
+
+    document.getElementById("generate").onclick = async function () {
+      await post("/v1/otps", {
+        destination: destEl.value.trim(),
+        channel: document.getElementById("channel").value,
+        purpose: purposeEl.value,
+      });
+      setTimeout(refreshInbox, 400);
+      setTimeout(refreshInbox, 1200);
+    };
+
+    document.getElementById("verify").onclick = function () {
+      return post("/v1/otps/verify", {
+        destination: destEl.value.trim(),
+        purpose: purposeEl.value,
+        code: document.getElementById("code").value.trim(),
+      });
+    };
+
+    document.getElementById("verify-twice").onclick = async function () {
+      const body = {
+        destination: destEl.value.trim(),
+        purpose: purposeEl.value,
+        code: document.getElementById("code").value.trim(),
+      };
+      await Promise.all([post("/v1/otps/verify", body), post("/v1/otps/verify", body)]);
+    };
+
+    document.getElementById("sms-down").onclick = async function () {
+      const status = await fetch("/api/status").then(function (r) { return r.json(); });
+      await post("/api/situations/sms", { down: !status.sms_down });
+      refreshStatus();
+    };
+
+    document.getElementById("redis-down").onclick = async function () {
+      const status = await fetch("/api/status").then(function (r) { return r.json(); });
+      await post("/api/situations/redis", { down: !status.redis_down });
+      refreshStatus();
+    };
+
+    document.getElementById("daily-full").onclick = async function () {
+      await post("/api/situations/daily-full", { destination: destEl.value.trim() });
+    };
+
+    document.getElementById("reset").onclick = async function () {
+      await post("/api/reset", {});
+      document.getElementById("inbox").textContent = "No message yet.";
+      refreshStatus();
+    };
+
+    refreshStatus();
+    setInterval(refreshInbox, 2000);
+  </script>
+</body>
+</html>

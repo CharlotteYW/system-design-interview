@@ -82,6 +82,14 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | 9 | Web crawler | [questions/web-crawler](questions/web-crawler/) | Hello Interview · Alex Xu Vol 1 Ch 9 |
 | 10 | Uber / ride matching | [questions/uber](questions/uber/) | Hello Interview · related: Alex Xu Vol 2 Proximity Service |
 
+### Other prompts
+
+Not a Hello Interview breakdown and not an Alex Xu chapter. Related delivery is the notification system.
+
+| Question | Folder | Status |
+| --- | --- | --- |
+| One-time password | [questions/one-time-password](questions/one-time-password/) | Implemented |
+
 ## Full index
 
 Overlapping names share **one** future folder. Prompt any of these to add the folder from the template.
