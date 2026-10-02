@@ -5,21 +5,21 @@ Practice these out loud. Add questions you actually got stuck on. Same five step
 ## 1. Requirements and design scope
 
 **Q: What are the must-have functional requirements?**  
-A: TBD
+A: `put(key, value)`, `get(key)`, and `delete(key)`. The value is about 1 KB. Lookup is by key only. A put that returned success is still readable after one storage server dies.
 
 **Q: What scale numbers would you use, and why?**  
-A: TBD
+A: The small-product guess, 100k DAU and 1M operations/day, is about 12 QPS average and under 100 QPS at peak. One server handles that. The interview numbers that force a ring are 200 million keys, 1 KB values (about 200 GB, about 600 GB with 3 copies), 80,000 gets/s, 20,000 puts/s, and a same-region p99 under 20 ms.
 
 **Q: What would you explicitly cut from a 45-minute interview?**  
-A: TBD
+A: Search by value, transactions across keys, a query language, multi-megabyte blobs, and cross-region strong reads. The Redis cache from the caching chapter can sit in front. This chapter is the durable store.
 
 ## 2. High-level design
 
 **Q: Walk through a write and a read at a high level.**  
-A: TBD
+A: A load balancer sends the call to any healthy server. That server is the coordinator. It hashes the key and picks the owner plus the next two servers clockwise. A put returns when 2 of those 3 have the write-ahead log on disk. A get asks 2 of the 3 and returns the newer version. Delete writes a tombstone with the same two-copy rule.
 
 **Q: Why these major boxes and not fewer/more?**  
-A: TBD
+A: One Postgres primary would take every put and every get, and its death takes every key. Copying the whole 200 GB onto every machine wastes disk. The ring stores each key on three servers only. Any server can coordinate, so there is no separate gateway that hashes the key first.
 
 ## 3. Low-level design and deep dive
 
