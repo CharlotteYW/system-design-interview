@@ -1,0 +1,38 @@
+---
+description: Finish every concept and question with a full follow-up deep dive
+alwaysApply: true
+---
+
+# Complete deep dive
+
+A concept or question is not finished when the main path is chosen. Before the lab, the summary, or treating the topic as understood, teach the follow-ups an interviewer still asks. Do this without waiting for the user to ask what else is left.
+
+Use the same depth as the sharding session (2026-10-03): adding a machine, a hot key, a write that spans two keys, and a filter that is not the shard key. For the next topic, name the equivalent probes (failure, scale, the operation the design made expensive, what changes when a number grows).
+
+## Where it belongs
+
+- **Concept** (`12-prepare-a-concept.mdc`): a README section after the variant table and the interview default. Session notes record the Q&A.
+- **Question** (`06-interview-pattern.mdc`): steps 3 and 4. The data model and the happy API are not the deep dive. FAQ gets the same probes.
+
+## Depth for each probe
+
+Same shape as `08-teach-after-each-answer.mdc`, tied to this session’s numbers and example:
+
+1. What happens in the system (who is touched, what fails).
+2. At least two options, including do nothing.
+3. When each wins (QPS, latency, cost, complexity, consistency).
+4. The choice for this interview and this local system.
+
+```
+Bad: "Use a saga for cross-shard transfers."
+
+Good: Account 42 is on shard0 and account 7 is on shard1, so one
+transaction cannot cover both. Compare keeping place-order on one
+account, a saga (debit, then credit, undo the debit if the credit
+fails), and two-phase commit. For this order system, keep the common
+write on one account. Name the saga only if they insist on the transfer.
+```
+
+## Record it
+
+Write the probes into the folder in the same session. Chat-only teaching does not count. Do not mark the topic Implemented, and do not close the chapter, until this section exists.

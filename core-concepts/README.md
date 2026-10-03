@@ -13,7 +13,7 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | 3 | Data Modeling | [data-modeling](data-modeling/) | Stub |
 | 4 | Database Indexing | [database-indexing](database-indexing/) | Implemented |
 | 5 | Caching | [caching](caching/) | Implemented |
-| 6 | Sharding | [sharding](sharding/) | Stub |
+| 6 | Sharding | [sharding](sharding/) | Implemented |
 | 7 | Consistent Hashing | [consistent-hashing](consistent-hashing/) | Implemented |
 | 8 | CAP Theorem | [cap-theorem](cap-theorem/) | Implemented |
 | 9 | Numbers to Know | [numbers-to-know](numbers-to-know/) | Notes-only |

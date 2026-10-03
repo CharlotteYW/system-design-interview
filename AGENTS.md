@@ -22,6 +22,7 @@ Follow `.cursor/rules/` in order:
 12. `11-stop-service-at-session-end.mdc` — when the user is done, ensure `scripts/stop.sh` exists and run it so Compose is not left up
 13. `12-prepare-a-concept.mdc` — core concepts and key technologies: explain variants, then a small demo (not the five-step product interview)
 14. `13-concept-folder.mdc` — required files under `core-concepts/` and `key-technologies/`
+15. `14-complete-deep-dive.mdc` — before closing a concept or question, teach the remaining interviewer probes at full depth and write them into the folder
 
 ## New vs existing questions
 
@@ -39,6 +40,7 @@ Follow `12-prepare-a-concept.mdc`. Folders already exist as stubs. Fill the READ
 - Skip FAQ, FLOW, or COMPONENTS **on product questions**. Concept labs use the README comparison instead (`12-prepare-a-concept.mdc`).
 - Stop at design docs **for product questions**. If that local system is missing, implement it. Concept labs may stay **Notes-only** when a table is the whole lesson (`numbers-to-know`).
 - Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`).
+- Close a concept or question after the main path only. Teach the remaining probes first and write them down (`14-complete-deep-dive.mdc`).
 - Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).
 - Skip the end-of-session Q&A. After the implementation summary, invite questions, answer them, and write them into FAQ/README (`10-end-of-session-questions.mdc`).
 - Leave the local stack running after the question is done. Run `scripts/stop.sh` (`11-stop-service-at-session-end.mdc`).

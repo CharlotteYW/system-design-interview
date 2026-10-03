@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sharding</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 46rem; line-height: 1.45; color: #1c1c1c; }
+    h1 { font-size: 1.6rem; }
+    section { border-top: 1px solid #ccc; padding-top: 1rem; margin-top: 1.2rem; }
+    label { display: block; margin: 0.4rem 0; }
+    input, button { font: inherit; padding: 0.3rem 0.5rem; }
+    button { cursor: pointer; margin-right: 0.4rem; }
+    #log, .panel { background: #f6f4ef; padding: 0.8rem; white-space: pre-wrap; min-height: 2.5rem; }
+    .note { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>Sharding</h1>
+  <p class="note">
+    At 100 writes/s and 50 GB you would keep <strong>one database</strong>.
+    This page forces two shards so the routing is visible.
+    Even account ids go to <strong>shard0</strong>. Odd account ids go to <strong>shard1</strong>.
+    “My orders” reads only that shard. “Every order” can read <strong>both shards</strong> (scatter)
+    or the <strong>recent</strong> table written at the same time as the order.
+  </p>
+
+  <section>
+    <h2>Place an order</h2>
+    <label>Account id <input id="account" type="number" value="42" min="0" /></label>
+    <label>Note <input id="note" value="book" /></label>
+    <button id="place" type="button">Place order</button>
+    <button id="mine" type="button">My orders</button>
+    <button id="reset" type="button">Reset</button>
+  </section>
+
+  <section>
+    <h2>Every order</h2>
+    <button id="recent" type="button">Read the recent table</button>
+    <button id="scatter" type="button">Scatter across both shards</button>
+    <p class="note">The recent table is the denormalized copy. Scatter is the query that touches every shard.</p>
+  </section>
+
+  <section>
+    <h2>What the databases did</h2>
+    <div id="log">Nothing yet.</div>
+    <div id="rows" class="panel"></div>
+  </section>
+
+  <script>
+    const logEl = document.getElementById("log");
+    const rowsEl = document.getElementById("rows");
+
+    function show(title, body) {
+      logEl.textContent = title;
+      const orders = body.orders || [];
+      rowsEl.textContent = orders.length
+        ? orders.map(function (order) {
+            return "account " + order.account_id + " · " + order.note + " · " + order.shard;
+          }).join("\n")
+        : "(no rows)";
+    }
+
+    async function post(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload || {}),
+      });
+      return response.json();
+    }
+
+    document.getElementById("place").onclick = async function () {
+      const body = await post("/api/orders", {
+        account_id: Number(document.getElementById("account").value),
+        note: document.getElementById("note").value,
+      });
+      show("Wrote " + body.wrote.join(" and ") + ". Account " + body.account_id + " lives on " + body.shard + ".", { orders: [body] });
+    };
+
+    document.getElementById("mine").onclick = async function () {
+      const accountId = Number(document.getElementById("account").value);
+      const response = await fetch("/api/accounts/" + accountId + "/orders");
+      const body = await response.json();
+      show("My orders read " + body.shards_read.join(", ") + " only.", body);
+    };
+
+    document.getElementById("recent").onclick = async function () {
+      const response = await fetch("/api/orders/recent");
+      const body = await response.json();
+      show("Hourly screen read " + body.shards_read.join(", ") + ".", body);
+    };
+
+    document.getElementById("scatter").onclick = async function () {
+      const response = await fetch("/api/orders/scatter");
+      const body = await response.json();
+      show("Scatter read " + body.shards_read.join(" and ") + ".", body);
+    };
+
+    document.getElementById("reset").onclick = async function () {
+      await post("/api/reset");
+      show("Tables cleared.", { orders: [] });
+    };
+  </script>
+</body>
+</html>

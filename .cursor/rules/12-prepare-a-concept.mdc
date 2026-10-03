@@ -9,8 +9,8 @@ When the user names a **core concept** or **key technology** (folder under `core
 
 0. **Commit and push first** (`04-commit-before-question.mdc`). Clean tree, not ahead of the remote, before touching that topic.
 1. Use that slug’s folder (already stubbed). Do **not** use the five-step product-interview pattern (`06-interview-pattern.mdc`).
-2. **Teach first in the README.** The job is to explain the idea: what it is, every important variant, when each wins, pitfalls, interview default. Original notes only; link Hello Interview / cite Alex Xu.
-3. **Collaborate.** Let the user try explaining; then teach (`08-teach-after-each-answer.mdc`: options, tradeoffs, choice). Record Q&A in that README’s Session notes.
+2. **Teach first in the README.** The job is to explain the idea: what it is, every important variant, when each wins, pitfalls, interview default. Then the follow-up deep dive in `14-complete-deep-dive.mdc`. Original notes only; link Hello Interview / cite Alex Xu.
+3. **Collaborate.** Let the user try explaining; then teach (`08-teach-after-each-answer.mdc`: options, tradeoffs, choice). Teach the remaining probes before closing, without waiting to be asked. Record Q&A in that README’s Session notes.
 4. **Demo.** If a running system helps, implement a **small** Python/FastAPI + Docker lab that shows the variants (not a full product). Same venv, `setup.sh` / tests / `stop.sh` as questions. Skip Docker only when the topic is numbers/tables (e.g. numbers-to-know) and say so in the README.
 5. Mark status **Implemented** (or **Notes-only** if no stack), update the parent index, run `stop.sh` when the session ends (`11-stop-service-at-session-end.mdc`).
 
