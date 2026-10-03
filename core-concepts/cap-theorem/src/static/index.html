@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>CAP theorem</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 46rem; line-height: 1.45; color: #1c1c1c; }
+    h1 { font-size: 1.6rem; }
+    section { border-top: 1px solid #ccc; padding-top: 1rem; margin-top: 1.2rem; }
+    button { font: inherit; padding: 0.3rem 0.6rem; margin: 0.2rem 0.3rem 0.2rem 0; cursor: pointer; }
+    .nodes { display: flex; gap: 1rem; }
+    .node { flex: 1; background: #f6f4ef; padding: 0.8rem; }
+    #log { background: #f6f4ef; padding: 0.8rem; white-space: pre-wrap; min-height: 4rem; }
+    .note { color: #333; }
+  </style>
+</head>
+<body>
+  <h1>CAP theorem</h1>
+  <p class="note">
+    Two servers hold the same numbers. <strong>Seats are CP</strong>: a sale writes both copies, and a cut link refuses the sale.
+    <strong>Likes are AP</strong>: a cut link still records the click on the side you pressed. Healing the link adds those clicks together.
+    The key-value store’s 2-of-3 put is the same refusal as the seat: one reachable copy is not enough to say yes.
+  </p>
+
+  <section>
+    <h2>The link</h2>
+    <p id="link">Link is up.</p>
+    <button id="cut" type="button">Cut the link</button>
+    <button id="heal" type="button">Restore the link</button>
+    <button id="reset" type="button">Reset</button>
+  </section>
+
+  <section>
+    <h2>Copies</h2>
+    <div class="nodes">
+      <div class="node">
+        <h3>Server A</h3>
+        <p id="a-seats">Seats: 1</p>
+        <p id="a-likes">Likes: 0</p>
+        <button id="seat-a" type="button">Sell a seat on A</button>
+        <button id="like-a" type="button">Like on A</button>
+      </div>
+      <div class="node">
+        <h3>Server B</h3>
+        <p id="b-seats">Seats: 1</p>
+        <p id="b-likes">Likes: 0</p>
+        <button id="seat-b" type="button">Sell a seat on B</button>
+        <button id="like-b" type="button">Like on B</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>What happened</h2>
+    <div id="log">Nothing yet.</div>
+  </section>
+
+  <script>
+    function paint(body) {
+      document.getElementById("link").textContent = body.partitioned ? "Link is cut." : "Link is up.";
+      document.getElementById("a-seats").textContent = "Seats: " + body.a.seats;
+      document.getElementById("b-seats").textContent = "Seats: " + body.b.seats;
+      document.getElementById("a-likes").textContent = "Likes: " + body.a.likes;
+      document.getElementById("b-likes").textContent = "Likes: " + body.b.likes;
+      if (body.detail) {
+        document.getElementById("log").textContent = (body.mode ? body.mode + " · " : "") + body.detail;
+      }
+    }
+
+    async function post(url, payload) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      paint(body);
+    }
+
+    document.getElementById("cut").onclick = function () { post("/api/partition", { cut: true }); };
+    document.getElementById("heal").onclick = function () { post("/api/partition", { cut: false }); };
+    document.getElementById("reset").onclick = function () { post("/api/reset", {}); };
+    document.getElementById("seat-a").onclick = function () { post("/api/seat", { node: "A" }); };
+    document.getElementById("seat-b").onclick = function () { post("/api/seat", { node: "B" }); };
+    document.getElementById("like-a").onclick = function () { post("/api/like", { node: "A" }); };
+    document.getElementById("like-b").onclick = function () { post("/api/like", { node: "B" }); };
+
+    fetch("/api/state").then(function (r) { return r.json(); }).then(paint);
+  </script>
+</body>
+</html>
