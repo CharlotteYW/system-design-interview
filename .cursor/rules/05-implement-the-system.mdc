@@ -7,7 +7,7 @@ alwaysApply: true
 
 Preparing a question is not done at design docs. If the local system does **not** exist (empty `src/`, stub `setup.sh`, or status Stub/Designed), **implement it** in that same pass.
 
-Ship a system the user can start and click through, not only APIs:
+Ship a system the user can start and click through, not only APIs. When the design has important variants, the UI must show those variants side by side (`16-show-the-variants.mdc`).
 
 - **Frontend** — a real UI (simple HTML/JS is enough; SPA only if it helps)
 - **Backend** — FastAPI (or extra workers if the design needs them)

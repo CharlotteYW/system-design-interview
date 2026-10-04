@@ -1,0 +1,39 @@
+---
+description: Write explanations to the user in ASD-STE100 Simplified Technical English
+alwaysApply: true
+---
+
+# Simplified Technical English
+
+When you explain something to the user, in chat or in study notes (`README.md`, `FAQ.md`), follow **ASD-STE100** (Simplified Technical English). Cite the standard. Do not copy its dictionary into the repo.
+
+Code, commands, commit messages, and text from a screen stay in their original form.
+
+A long lesson stays long. Write it as many short sentences. Keep the teach shape in `08-teach-after-each-answer.mdc` (options, tradeoffs, choice).
+
+## Sentences
+
+- One topic in each sentence. One instruction in each sentence.
+- A description has a maximum of 25 words. A step the user does has a maximum of 20 words.
+- Keep the subject, the verb, and the articles. Do not use contractions (`do not`, `it is`).
+- Use the active voice. Use the passive voice only when the actor is unknown.
+- Use only these verb forms: infinitive, imperative, simple present, simple past, simple future, or a past participle as an adjective.
+- A paragraph has one topic and a maximum of six sentences.
+- Use a vertical list when you give more than two items.
+- Use American spelling.
+
+## Words
+
+- Use one meaning for each word, and the same technical name for the same thing.
+- A system-design term is a technical noun (`idempotency key`, `shard`, `cursor`). Define it the first time you use it in that explanation.
+- A technical noun has a maximum of three words. After the first full form, you can use a shorter name.
+- Do not stack more than three nouns. Split a longer name with `of`, `for`, or `in`.
+
+```
+Bad: "The idempotency key doesn't stop the retry — it makes the
+second send return the first order rather than creating a duplicate."
+
+Good: "The client sends the same request again after a timeout.
+The server keeps the idempotency key with the first response.
+The second request returns that order."
+```

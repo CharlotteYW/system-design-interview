@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn>=0.32
+redis>=5.0
+PyJWT>=2.9
+strawberry-graphql>=0.250
+grpcio>=1.66
+grpcio-tools>=1.66

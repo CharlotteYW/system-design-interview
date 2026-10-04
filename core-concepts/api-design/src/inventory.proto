@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+service Inventory {
+  rpc CheckSeats (CheckRequest) returns (CheckReply);
+}
+
+message CheckRequest {
+  string event_id = 1;
+  int32 quantity = 2;
+}
+
+message CheckReply {
+  bool ok = 1;
+  int32 remaining = 2;
+}

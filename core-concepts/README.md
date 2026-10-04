@@ -9,7 +9,7 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | # | Topic | Folder | Status |
 | --- | --- | --- | --- |
 | 1 | Networking Essentials | [networking-essentials](networking-essentials/) | Stub |
-| 2 | API Design | [api-design](api-design/) | Stub |
+| 2 | API Design | [api-design](api-design/) | Implemented |
 | 3 | Data Modeling | [data-modeling](data-modeling/) | Stub |
 | 4 | Database Indexing | [database-indexing](database-indexing/) | Implemented |
 | 5 | Caching | [caching](caching/) | Implemented |

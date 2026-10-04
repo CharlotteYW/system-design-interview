@@ -1,0 +1,7 @@
+__pycache__
+.pytest_cache
+tests
+scripts
+README.md
+frontend/node_modules
+frontend/dist

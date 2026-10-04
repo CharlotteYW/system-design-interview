@@ -1,9 +1,52 @@
-# Local demo skeleton. Fill when this concept is prompted.
-# Default study stack: Python/FastAPI. Add Postgres, Redis, MinIO, Kafka, nginx
-# only if that concept actually needs them.
+services:
+  app:
+    image: api-design-lab
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET: lab-secret
+      INVENTORY_ADDR: inventory:50051
+    depends_on:
+      redis:
+        condition: service_healthy
+      inventory:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
-# services:
-#   app:
-#     build: .
-#     ports:
-#       - "8000:8000"
+  inventory:
+    image: api-design-lab
+    build: .
+    command: ["python", "-m", "src.inventory_server"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.create_connection(('127.0.0.1',50051),2); s.close()",
+        ]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20

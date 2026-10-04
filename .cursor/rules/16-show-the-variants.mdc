@@ -1,0 +1,16 @@
+---
+description: Show each important variant in the lab so the user can compare tradeoffs
+alwaysApply: true
+---
+
+# Show the variants
+
+A concept or a question is not complete when the lab shows only the winner. The user must see the difference and the tradeoff, then choose.
+
+Show each important variant from the comparison table when a small demo can do it. Put the variants side by side in the UI. Show the request, the store that was used, and the result.
+
+Name the interview default in the page and in the README. The other variants stay available so the user can compare them.
+
+A notes-only topic (for example numbers to know) uses the comparison table as the breadth. Say that in the README.
+
+Record the choice and the reason in the session notes. Do not delete a variant from the lab because the interview default is a different option.
