@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Networking essentials</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 2rem auto; max-width: 52rem; line-height: 1.45; color: #1c1c1c; background: #fff; }
+    h1 { font-size: 1.6rem; }
+    section { border-top: 1px solid #ccc; padding-top: 1rem; margin-top: 1.2rem; }
+    button, select, input { font: inherit; padding: 0.25rem 0.5rem; margin: 0.2rem 0.3rem 0.2rem 0; }
+    button { cursor: pointer; }
+    pre { background: #f6f4ef; padding: 0.8rem; white-space: pre-wrap; min-height: 2.5rem; }
+    .where { color: #444; }
+    .use { background: #f6f4ef; padding: 0.45rem 0.6rem; }
+    .stack { max-width: 36rem; margin: 1rem 0 1.5rem; }
+    .stack .label { text-align: center; font-weight: bold; margin: 0.4rem 0; }
+    .box { border: 2px solid #1c1c1c; padding: 0.8rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem; }
+    .band, .cell, .pipe { text-align: center; }
+    .cell, .band a, .also a { display: inline-block; border: 1px solid #1c1c1c; padding: 0.35rem 0.5rem; text-decoration: none; color: inherit; background: #fff; }
+    .band { margin: 0.2rem 0; }
+    .pipe { font-family: ui-monospace, monospace; margin: 0.15rem 0; }
+    .also { text-align: center; margin-top: 0.6rem; }
+    .cell.on, .band a.on, .also a.on { background: #f3e2b3; border-color: #8a5a00; }
+    h2 .layer { font-weight: normal; font-size: 0.85rem; color: #444; }
+    table { border-collapse: collapse; width: 100%; margin: 0.6rem 0 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
+    th { background: #f6f4ef; }
+  </style>
+</head>
+<body>
+  <h1>Networking essentials</h1>
+  <p>The interview default is HTTPS. That is HTTP on TCP, plus TLS. Read this page from the top of the stack to the bottom.</p>
+
+  <section id="map">
+    <h2>The stack</h2>
+    <p>Each box is one layer. A call starts in the application layer and rides every layer under it. Click a name to open that panel. Then wrap one call to see which boxes it uses.</p>
+    <div class="stack">
+      <p class="label">Application layer</p>
+      <div class="box">
+        <a class="cell" data-key="rest" href="#rest">REST</a>
+        <a class="cell" data-key="graphql" href="#graphql">GraphQL</a>
+        <a class="cell" data-key="grpc" href="#grpc">gRPC</a>
+        <a class="cell" data-key="sse" href="#sse">SSE</a>
+        <a class="cell" data-key="websocket" href="#websocket">WebSocket</a>
+        <a class="cell" data-key="webrtc" href="#webrtc">WebRTC</a>
+      </div>
+      <p class="also">Same path as REST: <a data-key="rest" href="#long-poll">Long polling</a> <a data-key="rest" href="#video">HLS</a> <a data-key="rest" href="#video">DASH</a></p>
+      <p class="pipe">|</p>
+      <p class="band"><a data-key="rest graphql sse websocket" href="#http">HTTP</a> <a data-key="grpc" href="#http">HTTP/2</a></p>
+      <p class="pipe">|</p>
+      <p class="band"><a data-key="rest graphql sse websocket grpc" href="#tls">TLS</a> <a data-key="webrtc" href="#tls">DTLS</a></p>
+      <p class="pipe">|</p>
+      <p class="band"><a data-key="rest graphql sse websocket grpc" href="#transport">TCP</a> <a data-key="webrtc" href="#transport">UDP</a></p>
+      <p class="pipe">|</p>
+      <p class="band"><a data-key="rest graphql sse websocket grpc webrtc" href="#ip">IP</a></p>
+    </div>
+    <p class="where">Code: stack in src/main.py.</p>
+    <button id="wrap-rest" type="button">Wrap a REST call</button>
+    <button id="wrap-grpc" type="button">Wrap a gRPC call</button>
+    <button id="wrap-webrtc" type="button">Wrap a WebRTC call</button>
+    <pre id="stack-out">Ready.</pre>
+  </section>
+
+  <section id="application">
+    <h2>Application layer</h2>
+    <p>This layer is the message your program understands. The six names in the box are the ones to memorize. Long polling, HLS, and DASH sit here too, and they ride HTTP.</p>
+    <p>For a normal API, say HTTPS with REST. Say Server-Sent Events when only the server pushes. Say WebSocket when both sides send. Say gRPC between your services. Say HLS or DASH for stored video. Say WebRTC for a live call.</p>
+    <table>
+      <thead>
+        <tr><th>Protocol</th><th>Usual job</th><th>Use it when</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>REST</td><td>A path names a resource. The method is the verb.</td><td>The usual public API. Start here.</td></tr>
+        <tr><td>GraphQL</td><td>The client names the fields.</td><td>A client that changes often and wants only some fields.</td></tr>
+        <tr><td>gRPC</td><td>One service calls a function on another service.</td><td>A hot call between your own services.</td></tr>
+        <tr><td>Server-Sent Events</td><td>The server writes text events on one open response.</td><td>Push a live update, such as an auction price.</td></tr>
+        <tr><td>WebSocket</td><td>Both sides send frames on one socket.</td><td>A game or a chat where both sides send often.</td></tr>
+        <tr><td>WebRTC</td><td>Peers send audio or video.</td><td>A video call or an audio call.</td></tr>
+        <tr><td>Long polling</td><td>One HTTP request waits for one event.</td><td>One live update when the client cannot hold a stream.</td></tr>
+        <tr><td>HLS</td><td>The player reads one playlist, then short segments.</td><td>Play a stored video from one playlist.</td></tr>
+        <tr><td>DASH</td><td>The player reads a manifest that lists qualities.</td><td>Play a stored video and pick 360 or 720.</td></tr>
+      </tbody>
+    </table>
+    <p>Each button below prints the call. You see the request, then the response. The function name stays in the lab result.</p>
+  </section>
+
+  <section id="rest">
+    <h2>REST <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. A public client reads or updates one resource. Start with REST in an interview.</p>
+    <p>REST names a resource with a path. GET /api/videos/1 reads one video. The method is the verb.</p>
+    <p class="where">Code: rest_video in src/main.py.</p>
+    <button id="rest" type="button">GET /api/videos/1</button>
+    <pre id="rest-out">Ready.</pre>
+  </section>
+
+  <section id="graphql">
+    <h2>GraphQL <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. A client that changes often and needs a different set of fields.</p>
+    <p>The client names the fields. This query asks for title only. The server still stores city. The JSON omits it.</p>
+    <p class="where">Code: graphql_video in src/main.py. The API design lab uses Strawberry for a larger schema.</p>
+    <button id="gql" type="button">POST /api/graphql</button>
+    <pre id="gql-out">Ready.</pre>
+  </section>
+
+  <section id="grpc">
+    <h2>gRPC <span class="layer">Application, then HTTP/2, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. A hot call between your own services. Keep a public client on REST.</p>
+    <p>gRPC is a function call between your services. HTTP/2 carries it. Protobuf is the body. The button prints that call as fields, because the bytes are binary. The lab result is JSON from get_video_rpc in this process.</p>
+    <p class="where">Code: get_video_rpc in src/main.py. The API design lab runs a real second process.</p>
+    <button id="grpc" type="button">Call Video.Get</button>
+    <pre id="grpc-out">Ready.</pre>
+  </section>
+
+  <section id="sse">
+    <h2>Server-Sent Events <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. Push a live update to a browser. An auction price is the usual example.</p>
+    <p>One HTTP response stays open. The server writes text events. The client does not send more data on this connection.</p>
+    <p class="where">Code: events in src/main.py.</p>
+    <button id="sse" type="button">Open the event stream</button>
+    <pre id="sse-out">Ready.</pre>
+  </section>
+
+  <section id="websocket">
+    <h2>WebSocket <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. A game or a chat where both sides send often.</p>
+    <p>The connection starts as HTTP, then both sides send frames. The socket stays on one server.</p>
+    <p class="where">Code: ws in src/main.py.</p>
+    <input id="ws-text" value="hello" />
+    <button id="ws-send" type="button">Send on the WebSocket</button>
+    <pre id="ws-out">Ready.</pre>
+  </section>
+
+  <section id="webrtc">
+    <h2>WebRTC <span class="layer">Application, then DTLS, UDP, IP</span></h2>
+    <p class="use">Most common use. A video call or an audio call between browsers.</p>
+    <p>WebRTC tries a direct path for audio or video. UDP carries the media. A signaling server introduces the peers. TURN relays the media when the direct path fails.</p>
+    <p class="where">Code: webrtc in src/main.py. This page walks the steps. It does not open a real peer socket.</p>
+    <button id="rtc-signal" type="button">1. Signal</button>
+    <button id="rtc-stun" type="button">2. STUN</button>
+    <button id="rtc-direct" type="button">3. Direct</button>
+    <button id="rtc-turn" type="button">4. TURN</button>
+    <pre id="rtc-out">Ready.</pre>
+  </section>
+
+  <section id="video">
+    <h2>HLS and DASH <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. Play a stored video. HLS is one playlist. DASH is the choice when the player picks 360 or 720. A live call uses WebRTC.</p>
+    <p>A video player does not download the whole file first. It reads a playlist, then it fetches short segments. HLS uses one media playlist. DASH lists more than one quality in a manifest.</p>
+    <p class="where">Code: hls_playlist, hls_segment, dash_manifest, and dash_segment in src/main.py.</p>
+    <button id="hls" type="button">Play HLS</button>
+    <button id="dash" type="button">Play DASH 720</button>
+    <pre id="video-out">Ready.</pre>
+  </section>
+
+  <section id="long-poll">
+    <h2>Long polling <span class="layer">Application, then HTTP, TLS, TCP, IP</span></h2>
+    <p class="use">Most common use. One live update when the client cannot hold a stream.</p>
+    <p>The client sends HTTP and waits. The server answers when a message exists, or when time runs out. The client then sends again.</p>
+    <p class="where">Code: long_poll and publish in src/main.py.</p>
+    <button id="poll" type="button">Start long poll</button>
+    <button id="publish" type="button">Publish a message</button>
+    <pre id="poll-out">Ready.</pre>
+  </section>
+
+  <section id="http">
+    <h2>HTTP / HTTP/2</h2>
+    <p class="use">Most common use. A public web request. Use HTTPS for a public site. HTTP/2 carries many calls on one connection, and it carries gRPC.</p>
+    <p>HTTP carries REST, GraphQL, long polling, Server-Sent Events, WebSocket setup, HLS, and DASH. HTTP/2 carries gRPC. One call ends when the response arrives.</p>
+    <p class="where">Code: http_call in src/main.py.</p>
+    <button id="http" type="button">GET /api/http</button>
+    <pre id="http-out">Ready.</pre>
+  </section>
+
+  <section id="tls">
+    <h2>TLS / DTLS</h2>
+    <p class="use">Most common use. TLS encrypts a public HTTP call. That pair is HTTPS. DTLS encrypts WebRTC media on UDP.</p>
+    <p>TLS encrypts bytes on TCP. HTTPS is HTTP inside TLS. DTLS encrypts bytes on UDP. WebRTC media uses DTLS.</p>
+    <p>Round trip time is the wait for a packet to go and come back. A new HTTPS connection spends one round trip on TCP and one round trip on TLS.</p>
+    <button id="rtt-local" type="button">Same city</button>
+    <button id="rtt-country" type="button">Across the country</button>
+    <button id="rtt-ocean" type="button">Across an ocean</button>
+    <pre id="rtt-out">Ready.</pre>
+  </section>
+
+  <section id="transport">
+    <h2>TCP and UDP</h2>
+    <p class="use">Most common use. TCP carries almost every call. UDP carries live audio, a game, or a DNS lookup, when a lost packet is acceptable. A browser reaches UDP through WebRTC.</p>
+    <p>TCP and UDP are the transport. TCP keeps order and sends a lost packet again. UDP sends the packet and moves on. IP is the next layer under both.</p>
+    <p class="where">Code: packets in src/main.py.</p>
+    <button id="tcp" type="button">Send with TCP</button>
+    <button id="udp" type="button">Send with UDP</button>
+    <pre id="packet-out">Ready.</pre>
+  </section>
+
+  <section id="ip">
+    <h2>IP</h2>
+    <p class="use">Most common use. Name a machine and route the packet. In an interview, this layer means IP. A far user waits longer. A CDN stores images and video near that user.</p>
+    <p>IP carries the packet from one address to another. The application message stays inside the upper layers. Distance on this path sets the round trip.</p>
+    <p class="where">The addresses in a wrap come from stack in src/main.py. This lab has one machine.</p>
+  </section>
+
+  <section id="balancers">
+    <h2>Where a balancer sits</h2>
+    <p>A balancer sits beside one layer. The client-side balancer runs in the client, before the stack. An L7 balancer reads HTTP. An L4 balancer reads TCP and the IP address.</p>
+  </section>
+
+  <section id="client">
+    <h2>Client-side balancer</h2>
+    <p class="use">Most common use. Internal services you control, such as gRPC. DNS is the common form when many public clients can accept a slow update.</p>
+    <p>A config file holds only a seed. The seed is the address of the registry. The program fetches the server list. The program keeps that list in memory.</p>
+    <p>This page is that program. The list comes from GET /api/registry. The variable clientCursor walks server-a, then server-b, then server-c. Close the tab and the list is gone until the next click.</p>
+    <p>A phone browser for a public site uses DNS. The phone asks for a name. DNS returns an address. The phone caches that address for the TTL. TTL is the time the answer stays valid. The phone then talks to a dedicated balancer.</p>
+    <p>A phone app you ship can keep the list in app memory. The app starts from a seed address. The app refreshes the list from the registry.</p>
+    <p class="where">Code: registry and work in src/main.py. The pick is clientCursor in this page. The steps below are client_lb_story.</p>
+    <button id="client-lb" type="button">Pick the next server</button>
+    <pre id="client-out">Ready.</pre>
+
+    <h3>Static file</h3>
+    <p>The client copies a file into memory at start. A new server stays invisible until you ship a new file.</p>
+    <button id="lb-static" type="button">Next step</button>
+    <pre id="lb-static-out">Ready.</pre>
+
+    <h3>DNS cache</h3>
+    <p>The client looks up a name. It stores the addresses for the TTL. A DNS change waits until the TTL ends.</p>
+    <button id="lb-dns" type="button">Next step</button>
+    <pre id="lb-dns-out">Ready.</pre>
+
+    <h3>Service discovery</h3>
+    <p>The client polls a registry. The next poll copies the new list into memory. There is no TTL.</p>
+    <button id="lb-poll" type="button">Next step</button>
+    <pre id="lb-poll-out">Ready.</pre>
+
+    <h3>Registry push</h3>
+    <p>The client watches the registry. The registry sends the new list. The client does not poll.</p>
+    <button id="lb-push" type="button">Next step</button>
+    <pre id="lb-push-out">Ready.</pre>
+
+    <h3>Health check</h3>
+    <p>The client probes addresses it already knows. A silent address leaves the routing set. A probe cannot find a new server.</p>
+    <button id="lb-health" type="button">Next step</button>
+    <pre id="lb-health-out">Ready.</pre>
+
+    <h3>MOVED</h3>
+    <p>The client sends a key to the wrong server. That server answers with the owner. The client stores the owner and sends again.</p>
+    <button id="lb-moved" type="button">Next step</button>
+    <pre id="lb-moved-out">Ready.</pre>
+  </section>
+
+  <section id="balance">
+    <h2>L4 and L7</h2>
+    <p class="use">Most common use. L7 routes public HTTP, including long polling. L4 keeps a WebSocket on one server.</p>
+    <p>These are dedicated balancers. They sit in front of the servers. An L4 balancer sees the IP and the port. An L7 balancer reads the HTTP path.</p>
+    <p class="where">Code: balance in src/main.py.</p>
+    <button id="l4" type="button">Balance at L4</button>
+    <button id="l7" type="button">Balance at L7</button>
+    <pre id="bal-out">Ready.</pre>
+  </section>
+
+  <section id="failures">
+    <h2>When a call fails</h2>
+    <p>These tools sit on the call. They work at the layer that waits for an answer. A timeout bounds one try. An idempotency key makes a retry safe. A circuit breaker stops a stream of tries.</p>
+  </section>
+
+  <section id="retry-panel">
+    <h2>Timeout and backoff</h2>
+    <p class="use">Most common use. A call that fails for a moment. In an interview, say retry with exponential backoff, and add jitter.</p>
+    <p>A timeout stops a slow call. A retry sends it again. Exponential backoff waits longer after each failure. Jitter is a small random extra wait, so many clients do not retry together.</p>
+    <p class="where">Code: slow in src/main.py. The retry loop is in this page.</p>
+    <button id="retry" type="button">Call with timeout and backoff</button>
+    <pre id="retry-out">Ready.</pre>
+  </section>
+
+  <section>
+    <h2>Idempotency</h2>
+    <p class="use">Most common use. A payment, or any write the client might send twice. A GET is already safe to repeat.</p>
+    <p>A retry can charge a card twice. The idempotency key is a name for one charge. The server stores the first receipt and returns it on the next call with that key.</p>
+    <p class="where">Code: charge in src/main.py.</p>
+    <button id="charge" type="button">Charge with key pay-1</button>
+    <button id="charge-again" type="button">Charge with key pay-1 again</button>
+    <button id="charge-new" type="button">Charge with key pay-2</button>
+    <pre id="charge-out">Ready.</pre>
+  </section>
+
+  <section>
+    <h2>Circuit breaker</h2>
+    <p class="use">Most common use. A dependency stays down. Stop the calls to an external API, a database, or another service.</p>
+    <p>The breaker counts failures. After three failures it opens. An open breaker fails fast and does not call the dependency. After a short wait it becomes half-open and allows one trial. A success closes it.</p>
+    <p class="where">Code: breaker_call in src/main.py.</p>
+    <button id="break-fail" type="button">Fail three calls</button>
+    <button id="break-open" type="button">Call while open</button>
+    <button id="break-half" type="button">Wait, then try one call</button>
+    <pre id="break-out">Ready.</pre>
+  </section>
+
+  <script>
+    const packetOut = document.getElementById("packet-out");
+    const httpOut = document.getElementById("http-out");
+    const restOut = document.getElementById("rest-out");
+    const gqlOut = document.getElementById("gql-out");
+    const grpcOut = document.getElementById("grpc-out");
+    const rttOut = document.getElementById("rtt-out");
+    const pollOut = document.getElementById("poll-out");
+    const sseOut = document.getElementById("sse-out");
+    const wsOut = document.getElementById("ws-out");
+    const rtcOut = document.getElementById("rtc-out");
+    const videoOut = document.getElementById("video-out");
+    const clientOut = document.getElementById("client-out");
+    const balOut = document.getElementById("bal-out");
+    const retryOut = document.getElementById("retry-out");
+    const chargeOut = document.getElementById("charge-out");
+    const breakOut = document.getElementById("break-out");
+    let socket;
+    let clientCursor = 0;
+
+    function show(el, value) {
+      el.textContent = JSON.stringify(value, null, 2);
+    }
+
+    function showCall(el, message, result) {
+      const lines = [message.trim()];
+      if (result !== undefined) {
+        lines.push("");
+        lines.push("Lab result");
+        lines.push(typeof result === "string" ? result : JSON.stringify(result, null, 2));
+      }
+      el.textContent = lines.join("\n");
+    }
+
+    function httpMessage(requestLines, status, statusText, responseType, body) {
+      const responseBody = typeof body === "string" ? body : JSON.stringify(body, null, 2);
+      return [
+        ...requestLines,
+        "",
+        "HTTP/1.1 " + status + " " + statusText,
+        "Content-Type: " + responseType,
+        "",
+        responseBody,
+      ].join("\n");
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    function highlight(call) {
+      document.querySelectorAll("[data-key]").forEach((el) => {
+        const keys = el.dataset.key.split(" ");
+        el.classList.toggle("on", keys.includes(call));
+      });
+    }
+
+    async function wrap(call) {
+      highlight(call);
+      show(document.getElementById("stack-out"), await (await fetch("/api/stack?call=" + call)).json());
+    }
+    document.getElementById("wrap-rest").onclick = () => wrap("rest");
+    document.getElementById("wrap-grpc").onclick = () => wrap("grpc");
+    document.getElementById("wrap-webrtc").onclick = () => wrap("webrtc");
+
+    document.getElementById("tcp").onclick = async () => {
+      show(packetOut, await (await fetch("/api/packets?transport=tcp")).json());
+    };
+    document.getElementById("udp").onclick = async () => {
+      show(packetOut, await (await fetch("/api/packets?transport=udp")).json());
+    };
+    document.getElementById("http").onclick = async () => {
+      const response = await fetch("/api/http?region=local");
+      const body = await response.json();
+      showCall(httpOut, httpMessage(
+        ["GET /api/http?region=local HTTP/1.1", "Host: " + location.host, "Accept: application/json"],
+        response.status,
+        response.statusText,
+        "application/json",
+        body,
+      ));
+    };
+    document.getElementById("rest").onclick = async () => {
+      const response = await fetch("/api/videos/1");
+      const body = await response.json();
+      showCall(restOut, httpMessage(
+        ["GET /api/videos/1 HTTP/1.1", "Host: " + location.host, "Accept: application/json"],
+        response.status,
+        response.statusText,
+        "application/json",
+        body,
+      ));
+    };
+    document.getElementById("gql").onclick = async () => {
+      const payload = { query: "{ video { title } }" };
+      const response = await fetch("/api/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      showCall(gqlOut, httpMessage(
+        [
+          "POST /api/graphql HTTP/1.1",
+          "Host: " + location.host,
+          "Content-Type: application/json",
+          "",
+          JSON.stringify(payload),
+        ],
+        response.status,
+        response.statusText,
+        "application/json",
+        body,
+      ));
+    };
+    document.getElementById("grpc").onclick = async () => {
+      const response = await fetch("/api/grpc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ video_id: 1 }),
+      });
+      const body = await response.json();
+      showCall(grpcOut, [
+        "POST /Video/Get HTTP/2",
+        "Host: " + location.host,
+        "Content-Type: application/grpc",
+        "",
+        "video_id: 1",
+        "",
+        "HTTP/2 200",
+        "Content-Type: application/grpc",
+        "grpc-status: 0",
+        "",
+        "title: \"Concert\"",
+      ].join("\n"), body);
+    };
+
+    async function rtt(region) {
+      const started = performance.now();
+      const body = await (await fetch("/api/http?region=" + region)).json();
+      show(rttOut, { region, waited_ms: Math.round(performance.now() - started), body });
+    }
+    document.getElementById("rtt-local").onclick = () => rtt("local");
+    document.getElementById("rtt-country").onclick = () => rtt("country");
+    document.getElementById("rtt-ocean").onclick = () => rtt("ocean");
+
+    document.getElementById("poll").onclick = async () => {
+      const request = [
+        "GET /api/long-poll?wait_ms=8000 HTTP/1.1",
+        "Host: " + location.host,
+        "",
+        "The server holds this request until a message arrives, or until time runs out.",
+      ].join("\n");
+      pollOut.textContent = request;
+      const response = await fetch("/api/long-poll?wait_ms=8000");
+      const body = await response.json();
+      showCall(pollOut, httpMessage(
+        ["GET /api/long-poll?wait_ms=8000 HTTP/1.1", "Host: " + location.host],
+        response.status,
+        response.statusText,
+        "application/json",
+        body,
+      ));
+    };
+    document.getElementById("publish").onclick = async () => {
+      const payload = { text: "seat taken" };
+      const response = await fetch("/api/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      const call = httpMessage(
+        [
+          "POST /api/publish HTTP/1.1",
+          "Host: " + location.host,
+          "Content-Type: application/json",
+          "",
+          JSON.stringify(payload),
+        ],
+        response.status,
+        response.statusText,
+        "application/json",
+        body,
+      );
+      pollOut.textContent = pollOut.textContent === "Ready." ? call : pollOut.textContent + "\n\n" + call;
+    };
+    document.getElementById("sse").onclick = () => {
+      sseOut.textContent = [
+        "GET /api/events HTTP/1.1",
+        "Host: " + location.host,
+        "Accept: text/event-stream",
+        "",
+        "HTTP/1.1 200 OK",
+        "Content-Type: text/event-stream",
+        "",
+        "",
+      ].join("\n");
+      const source = new EventSource("/api/events");
+      source.onmessage = (event) => {
+        sseOut.textContent += "data: " + event.data + "\n\n";
+      };
+    };
+    document.getElementById("ws-send").onclick = () => {
+      const text = document.getElementById("ws-text").value;
+      const opening = [
+        "GET /ws HTTP/1.1",
+        "Host: " + location.host,
+        "Upgrade: websocket",
+        "Connection: Upgrade",
+        "",
+        "HTTP/1.1 101 Switching Protocols",
+        "Upgrade: websocket",
+        "",
+      ].join("\n");
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        wsOut.textContent = opening + "\nclient frame: " + text;
+        socket = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://") + location.host + "/ws");
+        socket.onmessage = (event) => {
+          wsOut.textContent += "\nserver frame: " + event.data;
+        };
+        socket.onopen = () => socket.send(text);
+        return;
+      }
+      wsOut.textContent += "\nclient frame: " + text;
+      socket.send(text);
+    };
+
+    const rtcWire = {
+      signal: [
+        "POST /signal HTTP/1.1",
+        "Host: " + location.host,
+        "Content-Type: application/json",
+        "",
+        "{\"type\":\"join\",\"room\":\"concert\"}",
+      ].join("\n"),
+      stun: [
+        "STUN Binding Request",
+        "10.0.0.8 -> stun",
+        "",
+        "STUN Binding Success",
+        "mapped-address: 203.0.113.8:54321",
+      ].join("\n"),
+      direct: [
+        "UDP",
+        "10.0.0.8:5000 -> 10.0.0.9:5000",
+        "DTLS application data",
+      ].join("\n"),
+      turn: [
+        "UDP",
+        "10.0.0.8:5000 -> turn:3478",
+        "The relay forwards the media to 10.0.0.9:5000.",
+      ].join("\n"),
+    };
+
+    async function rtc(step) {
+      const body = await (await fetch("/api/webrtc?step=" + step, { method: "POST" })).json();
+      const block = (rtcWire[step] || step) + "\n\nLab result\n" + JSON.stringify(body, null, 2);
+      rtcOut.textContent = rtcOut.textContent === "Ready." ? block : rtcOut.textContent + "\n\n" + block;
+    }
+    document.getElementById("rtc-signal").onclick = () => rtc("signal");
+    document.getElementById("rtc-stun").onclick = () => rtc("stun");
+    document.getElementById("rtc-direct").onclick = () => rtc("direct");
+    document.getElementById("rtc-turn").onclick = () => rtc("turn");
+
+    document.getElementById("hls").onclick = async () => {
+      const response = await fetch("/video/hls/index.m3u8");
+      const playlist = await response.text();
+      const parts = [httpMessage(
+        ["GET /video/hls/index.m3u8 HTTP/1.1", "Host: " + location.host, "Accept: application/vnd.apple.mpegurl"],
+        response.status,
+        response.statusText,
+        "application/vnd.apple.mpegurl",
+        playlist.trim(),
+      )];
+      for (const line of playlist.split("\n")) {
+        if (!line.startsWith("/")) continue;
+        const segment = await fetch(line);
+        const body = await segment.json();
+        parts.push(httpMessage(
+          ["GET " + line + " HTTP/1.1", "Host: " + location.host],
+          segment.status,
+          segment.statusText,
+          "application/json",
+          body,
+        ));
+      }
+      videoOut.textContent = parts.join("\n\n");
+    };
+    document.getElementById("dash").onclick = async () => {
+      const response = await fetch("/video/dash/manifest.mpd");
+      const manifest = await response.text();
+      const parts = [httpMessage(
+        ["GET /video/dash/manifest.mpd HTTP/1.1", "Host: " + location.host, "Accept: application/dash+xml"],
+        response.status,
+        response.statusText,
+        "application/dash+xml",
+        manifest.trim(),
+      )];
+      for (let index = 0; index < 3; index += 1) {
+        const path = "/video/dash/720/" + index;
+        const segment = await fetch(path);
+        const body = await segment.json();
+        parts.push(httpMessage(
+          ["GET " + path + " HTTP/1.1", "Host: " + location.host],
+          segment.status,
+          segment.statusText,
+          "application/json",
+          body,
+        ));
+      }
+      videoOut.textContent = parts.join("\n\n");
+    };
+
+    function showStory(el, body) {
+      el.textContent = [
+        "Step " + body.step + " of " + body.of + ". " + body.title,
+        "",
+        body.diagram,
+        "",
+        body.note,
+        "",
+        "memory: " + JSON.stringify(body.memory),
+        "source: " + JSON.stringify(body.source),
+      ].join("\n");
+    }
+
+    async function lbNext(method, outId) {
+      const response = await fetch("/api/client-lb/" + method + "/next", { method: "POST" });
+      showStory(document.getElementById(outId), await response.json());
+    }
+    document.getElementById("lb-static").onclick = () => lbNext("static", "lb-static-out");
+    document.getElementById("lb-dns").onclick = () => lbNext("dns", "lb-dns-out");
+    document.getElementById("lb-poll").onclick = () => lbNext("poll", "lb-poll-out");
+    document.getElementById("lb-push").onclick = () => lbNext("push", "lb-push-out");
+    document.getElementById("lb-health").onclick = () => lbNext("health", "lb-health-out");
+    document.getElementById("lb-moved").onclick = () => lbNext("moved", "lb-moved-out");
+
+    document.getElementById("client-lb").onclick = async () => {
+      const registry = await (await fetch("/api/registry")).json();
+      const index = clientCursor % registry.servers.length;
+      const choice = registry.servers[index];
+      clientCursor += 1;
+      const work = await (await fetch("/api/work?server=" + choice)).json();
+      show(clientOut, {
+        list_cache: "memory in this page",
+        decision: "round robin",
+        cursor: index,
+        registry: registry.servers,
+        client_chose: choice,
+        phone_public_site: "DNS cache, then a dedicated balancer",
+        work,
+      });
+    };
+
+    async function balance(mode) {
+      const rows = [];
+      for (const path of ["/api/http", "/ws"]) {
+        const response = await fetch("/api/balance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, path, client: "alice" }),
+        });
+        rows.push(await response.json());
+      }
+      show(balOut, { side: "server", client: "alice", rows });
+    }
+    document.getElementById("l4").onclick = () => balance("l4");
+    document.getElementById("l7").onclick = () => balance("l7");
+
+    document.getElementById("retry").onclick = async () => {
+      const steps = [];
+      let wait = 40;
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 120);
+        try {
+          const response = await fetch("/api/slow?client=browser", { signal: controller.signal });
+          clearTimeout(timer);
+          const body = await response.json();
+          steps.push({ attempt, body });
+          if (body.ok) break;
+        } catch (_error) {
+          clearTimeout(timer);
+          const jitter = Math.floor(Math.random() * 20);
+          steps.push({ attempt, result: "timeout", backoff_ms: wait + jitter });
+          await sleep(wait + jitter);
+          wait *= 2;
+        }
+      }
+      show(retryOut, { steps });
+    };
+
+    async function charge(key) {
+      const response = await fetch("/api/charge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, amount: 10 }),
+      });
+      show(chargeOut, await response.json());
+    }
+    document.getElementById("charge").onclick = () => charge("pay-1");
+    document.getElementById("charge-again").onclick = () => charge("pay-1");
+    document.getElementById("charge-new").onclick = () => charge("pay-2");
+
+    async function breaker(fail) {
+      const response = await fetch("/api/breaker", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fail }),
+      });
+      return response.json();
+    }
+    document.getElementById("break-fail").onclick = async () => {
+      const steps = [];
+      for (let index = 0; index < 3; index += 1) steps.push(await breaker(true));
+      show(breakOut, { steps });
+    };
+    document.getElementById("break-open").onclick = async () => {
+      show(breakOut, await breaker(false));
+    };
+    document.getElementById("break-half").onclick = async () => {
+      await sleep(500);
+      show(breakOut, await breaker(false));
+    };
+  </script>
+</body>
+</html>
