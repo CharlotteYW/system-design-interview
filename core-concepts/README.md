@@ -10,7 +10,7 @@ Prompt by name, e.g. `Networking Essentials` or `caching`. Commit previous work 
 | --- | --- | --- | --- |
 | 1 | Networking Essentials | [networking-essentials](networking-essentials/) | Implemented |
 | 2 | API Design | [api-design](api-design/) | Implemented |
-| 3 | Data Modeling | [data-modeling](data-modeling/) | Stub |
+| 3 | Data Modeling | [data-modeling](data-modeling/) | Implemented |
 | 4 | Database Indexing | [database-indexing](database-indexing/) | Implemented |
 | 5 | Caching | [caching](caching/) | Implemented |
 | 6 | Sharding | [sharding](sharding/) | Implemented |

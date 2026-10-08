@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Data modeling</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.45; background: #fff; color: #111; }
+      button { font: inherit; margin: 0.3rem 0.4rem 0.3rem 0; padding: 0.35rem 0.55rem; }
+      pre { background: #111; color: #eee; padding: 0.8rem; overflow: auto; white-space: pre-wrap; }
+      code { font-family: ui-monospace, monospace; }
+      .tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+      .tabs button[aria-selected="true"] { background: #111; color: #fff; }
+      .panel { display: none; border: 1px solid #ccc; padding: 0.2rem 1rem 1rem; margin: 0.6rem 0 1.6rem; }
+      .panel.on { display: block; }
+      .label { font-weight: 650; margin: 0.9rem 0 0.25rem; }
+      table.shape { border-collapse: collapse; background: #fff; }
+      table.shape th, table.shape td { border: 1px solid #111; padding: 0.35rem 0.65rem; }
+      table.shape th { background: #111; color: #fff; }
+      .pair { display: flex; align-items: center; gap: 0.45rem; margin: 0.35rem 0; }
+      .pair .key, .pair .value { border: 1px solid #111; padding: 0.35rem 0.55rem; }
+      .pair .key { background: #f3f3f3; }
+      .doc { border: 1px solid #111; padding: 0.55rem 0.75rem; max-width: 24rem; }
+      .moment { margin: 0.25rem 0 0.25rem 1rem; border-left: 3px solid #111; padding-left: 0.5rem; }
+      .partition { display: inline-block; vertical-align: top; border: 1px solid #111; margin: 0.3rem 0.7rem 0.3rem 0; min-width: 13rem; }
+      .partition .pkey { background: #111; color: #fff; padding: 0.3rem 0.5rem; }
+      .partition .msg { padding: 0.3rem 0.5rem; border-top: 1px solid #ddd; }
+      .columns { display: flex; gap: 0.45rem; align-items: flex-start; }
+      .col { border: 1px solid #111; min-width: 7.5rem; }
+      .col h4 { margin: 0; background: #111; color: #fff; padding: 0.3rem 0.45rem; font-size: 0.95rem; }
+      .col div { padding: 0.3rem 0.45rem; border-top: 1px solid #ddd; }
+      .edge { margin: 0.3rem 0; }
+      .edge b { display: inline-block; border: 1px solid #111; padding: 0.2rem 0.5rem; background: #fff; }
+      .point { display: flex; align-items: center; gap: 0.45rem; margin: 0.28rem 0; }
+      .bar { background: #111; height: 0.75rem; }
+      .term { margin: 0.35rem 0; }
+      .term b { display: inline-block; background: #111; color: #fff; padding: 0.12rem 0.4rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Data modeling</h1>
+    <p><strong>Interview default.</strong> Use Postgres for users, posts, and likes. Keep the author name on the user row. Add an index on <code>(user_id, created_at)</code> for recent posts of one user. Copy a field only when that read is hot.</p>
+    <p>The functions live in <code>src/main.py</code> and <code>src/engines.py</code>. Each button prints the picture, then the JSON.</p>
+
+    <h2>Eight database types</h2>
+    <p>Most common use. Name Postgres first. Open one tab when the requirement matches that type.</p>
+    <table id="engine-summary" class="shape">
+      <tr><th>Tab</th><th>Say it in the interview when</th><th>The requirement</th></tr>
+      <tr><td>PostgreSQL</td><td>Rows point at each other and a write must stay correct.</td><td>A unique phone, a foreign key, or a payment that happens once.</td></tr>
+      <tr><td>Redis</td><td>The read names one key and the value can live in memory.</td><td>A like count, a session, or an unread badge.</td></tr>
+      <tr><td>MongoDB</td><td>One screen loads one object and the fields differ per user.</td><td>A profile with optional fields and a nested list.</td></tr>
+      <tr><td>Cassandra</td><td>One chat id owns a time-ordered list.</td><td>The hot read is the messages in one conversation.</td></tr>
+      <tr><td>ClickHouse</td><td>A report sums one column across many rows.</td><td>Messages per city per day. The send path stays on the message store.</td></tr>
+      <tr><td>Neo4j</td><td>The product is a hop from friend to friend.</td><td>The main screen walks friend edges.</td></tr>
+      <tr><td>TimescaleDB</td><td>Every row is a time and a measurement.</td><td>Messages per minute in one room.</td></tr>
+      <tr><td>Elasticsearch</td><td>The user types a word and you find the messages.</td><td>The query is text inside the message.</td></tr>
+    </table>
+    <p>Each tab is one engine in Docker. The picture is the data shape. <code>write_engine</code> runs the write. <code>read_engine</code> runs the read.</p>
+    <div class="tabs" role="tablist">
+      <button id="engine-relational" type="button" role="tab" aria-selected="true" aria-controls="panel-relational">PostgreSQL</button>
+      <button id="engine-key-value" type="button" role="tab" aria-selected="false" aria-controls="panel-key-value">Redis</button>
+      <button id="engine-document" type="button" role="tab" aria-selected="false" aria-controls="panel-document">MongoDB</button>
+      <button id="engine-wide-column" type="button" role="tab" aria-selected="false" aria-controls="panel-wide-column">Cassandra</button>
+      <button id="engine-columnar" type="button" role="tab" aria-selected="false" aria-controls="panel-columnar">ClickHouse</button>
+      <button id="engine-graph" type="button" role="tab" aria-selected="false" aria-controls="panel-graph">Neo4j</button>
+      <button id="engine-time-series" type="button" role="tab" aria-selected="false" aria-controls="panel-time-series">TimescaleDB</button>
+      <button id="engine-search" type="button" role="tab" aria-selected="false" aria-controls="panel-search">Elasticsearch</button>
+    </div>
+
+    <section id="panel-relational" class="panel on" role="tabpanel">
+      <h3>Relational / row-oriented</h3>
+      <p class="label">Interview</p>
+      <p>Say PostgreSQL when rows point at each other and a write must stay correct.</p>
+      <p class="label">Requirement</p>
+      <p>You need a unique phone, a foreign key, or a payment that happens once.</p>
+      <p class="label">Industry databases</p>
+      <p>PostgreSQL, MySQL, Oracle, SQL Server. This tab runs PostgreSQL.</p>
+      <p class="label">Storage</p>
+      <p>The whole account sits in one row. An index on phone finds that row.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-relational"></div>
+      <p class="label">Write</p>
+      <pre>INSERT INTO accounts (id, username, phone) VALUES (2, 'bob', '555-0101');</pre>
+      <button id="write-relational" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>SELECT id, username, phone FROM accounts;</pre>
+      <button id="read-relational" type="button">Run the read</button>
+      <pre id="result-relational">Open this tab to read PostgreSQL.</pre>
+    </section>
+
+    <section id="panel-key-value" class="panel" role="tabpanel">
+      <h3>Key-value</h3>
+      <p class="label">Interview</p>
+      <p>Say Redis when the read names one key and the value can live in memory.</p>
+      <p class="label">Requirement</p>
+      <p>You need a like count, a session, or an unread badge.</p>
+      <p class="label">Industry databases</p>
+      <p>Redis, DynamoDB, RocksDB. This tab runs Redis.</p>
+      <p class="label">Storage</p>
+      <p>The key is the lookup. Redis keeps the value in memory.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-key-value"></div>
+      <p class="label">Write</p>
+      <pre>INCR like_count:moment:1</pre>
+      <button id="write-key-value" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>GET like_count:moment:1</pre>
+      <button id="read-key-value" type="button">Run the read</button>
+      <pre id="result-key-value">Open this tab to read Redis.</pre>
+    </section>
+
+    <section id="panel-document" class="panel" role="tabpanel">
+      <h3>Document</h3>
+      <p class="label">Interview</p>
+      <p>Say a document store when one screen loads one object and fields differ per user.</p>
+      <p class="label">Requirement</p>
+      <p>A profile has optional fields and a nested list of moments.</p>
+      <p class="label">Industry databases</p>
+      <p>MongoDB, Couchbase, Firestore. This tab runs MongoDB.</p>
+      <p class="label">Storage</p>
+      <p>MongoDB stores one BSON document. The moments list lives inside the profile.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-document"></div>
+      <p class="label">Write</p>
+      <pre>db.profiles.updateOne({_id: 'ada'}, {$set: {badge: 'vip'}})</pre>
+      <button id="write-document" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>db.profiles.findOne({_id: 'ada'})</pre>
+      <button id="read-document" type="button">Run the read</button>
+      <pre id="result-document">Open this tab to read MongoDB.</pre>
+    </section>
+
+    <section id="panel-wide-column" class="panel" role="tabpanel">
+      <h3>Wide-column</h3>
+      <p class="label">Interview</p>
+      <p>Say Cassandra when one chat id owns a time-ordered list of messages.</p>
+      <p class="label">Requirement</p>
+      <p>The hot read is the messages in one conversation, in time order.</p>
+      <p class="label">Industry databases</p>
+      <p>Cassandra, ScyllaDB, HBase. This tab runs Cassandra.</p>
+      <p class="label">Storage</p>
+      <p>Messages for one chat sit in one partition. Time sorts the rows inside it.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-wide-column"></div>
+      <p class="label">Write</p>
+      <pre>INSERT INTO messages (chat_id, sent_at, sender, body) VALUES ('chat-1', '2024-01-01 10:05:00', 'ada', 'on my way');</pre>
+      <button id="write-wide-column" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>SELECT sender, body FROM messages WHERE chat_id = 'chat-1';</pre>
+      <button id="read-wide-column" type="button">Run the read</button>
+      <pre id="result-wide-column">Open this tab to read Cassandra.</pre>
+    </section>
+
+    <section id="panel-columnar" class="panel" role="tabpanel">
+      <h3>Columnar analytics</h3>
+      <p class="label">Interview</p>
+      <p>Say a columnar store when a report sums one column across many rows.</p>
+      <p class="label">Requirement</p>
+      <p>The screen is messages per city per day. The send path stays on the message store.</p>
+      <p class="label">Industry databases</p>
+      <p>Snowflake, BigQuery, ClickHouse, Redshift, DuckDB. This tab runs ClickHouse.</p>
+      <p class="label">Storage</p>
+      <p>Each column sits together. A sum reads the messages column.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-columnar"></div>
+      <p class="label">Write</p>
+      <pre>INSERT INTO message_stats VALUES ('2024-01-01', 'Guangzhou', 400);</pre>
+      <button id="write-columnar" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>SELECT city, sum(messages) FROM message_stats WHERE day = '2024-01-01' GROUP BY city;</pre>
+      <button id="read-columnar" type="button">Run the read</button>
+      <pre id="result-columnar">Open this tab to read ClickHouse.</pre>
+    </section>
+
+    <section id="panel-graph" class="panel" role="tabpanel">
+      <h3>Graph</h3>
+      <p class="label">Interview</p>
+      <p>Say a graph store when the product is a hop from friend to friend.</p>
+      <p class="label">Requirement</p>
+      <p>The main screen walks friend edges. A short hop can stay in PostgreSQL.</p>
+      <p class="label">Industry databases</p>
+      <p>Neo4j, Amazon Neptune, JanusGraph. This tab runs Neo4j.</p>
+      <p class="label">Storage</p>
+      <p>A person is a node. FRIEND is an edge stored with those nodes.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-graph"></div>
+      <p class="label">Write</p>
+      <pre>MERGE (ada:Person {name:'ada'}) MERGE (lee:Person {name:'lee'}) MERGE (ada)-[:FRIEND]->(lee);</pre>
+      <button id="write-graph" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>MATCH (ada)-[:FRIEND]->(friend)-[:FRIEND]->(next) RETURN next;</pre>
+      <button id="read-graph" type="button">Run the read</button>
+      <pre id="result-graph">Open this tab to read Neo4j.</pre>
+    </section>
+
+    <section id="panel-time-series" class="panel" role="tabpanel">
+      <h3>Time-series</h3>
+      <p class="label">Interview</p>
+      <p>Say a time-series store when every row is a time and a measurement.</p>
+      <p class="label">Requirement</p>
+      <p>The question is how many messages a room sends each minute.</p>
+      <p class="label">Industry databases</p>
+      <p>InfluxDB, TimescaleDB, Prometheus. This tab runs TimescaleDB.</p>
+      <p class="label">Storage</p>
+      <p>Rows sit in time chunks. A chunk is one time range of the same table.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-time-series"></div>
+      <p class="label">Write</p>
+      <pre>INSERT INTO msg_rate (time, room, messages) VALUES ('2024-01-01 10:03:00+00', 'chat-1', 15);</pre>
+      <button id="write-time-series" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>SELECT time, messages FROM msg_rate WHERE room = 'chat-1' ORDER BY time;</pre>
+      <button id="read-time-series" type="button">Run the read</button>
+      <pre id="result-time-series">Open this tab to read TimescaleDB.</pre>
+    </section>
+
+    <section id="panel-search" class="panel" role="tabpanel">
+      <h3>Search / inverted index</h3>
+      <p class="label">Interview</p>
+      <p>Say a search index when the user types a word and you find the messages.</p>
+      <p class="label">Requirement</p>
+      <p>The query is text inside the message. A lookup by id stays a primary key.</p>
+      <p class="label">Industry databases</p>
+      <p>Elasticsearch, OpenSearch, Solr. This tab runs Elasticsearch.</p>
+      <p class="label">Storage</p>
+      <p>The word is the key. The message id is the value in the inverted index.</p>
+      <p class="label">Data shape</p>
+      <div id="shape-search"></div>
+      <p class="label">Write</p>
+      <pre>PUT /messages/_doc/3 {sender: 'ada', body: 'lunch menu'}</pre>
+      <button id="write-search" type="button">Run the write</button>
+      <p class="label">Read</p>
+      <pre>POST /messages/_search {query: {match: {body: 'lunch'}}}</pre>
+      <button id="read-search" type="button">Run the read</button>
+      <pre id="result-search">Open this tab to read Elasticsearch.</pre>
+    </section>
+
+    <h2>Schema design inside the store</h2>
+    <p>The tabs choose the database type. This part lays out the data inside PostgreSQL. Each section tests one choice from your first answer.</p>
+    <table id="schema-summary" class="shape">
+      <tr><th>Section</th><th>Concept part</th><th>Your first answer</th></tr>
+      <tr><td>Copied author name</td><td>Normalization and denormalization</td><td>Copy the name onto each post</td></tr>
+      <tr><td>Likes</td><td>Keys and constraints, plus a cache beside the source of truth</td><td>Store likes in a key-value store</td></tr>
+      <tr><td>Partition key</td><td>Index and shard key from the access pattern</td><td>Partition by user id, add servers and salt</td></tr>
+      <tr><td>Home feed</td><td>A query that the key does not serve</td><td>The follow-up probe</td></tr>
+      <tr><td>Graph hops</td><td>A graph in PostgreSQL before a graph database</td><td>The follow-up probe</td></tr>
+    </table>
+
+    <h2>Copied author name</h2>
+    <p>Most common use. Keep the name on the user. Copy it onto each post only for a hot read.</p>
+    <p>Ada has two posts. A rename writes <code>users.username</code>. The join sees the new name. <code>post_copies</code> stays old until you update each copy. <code>rename_user</code> does that write.</p>
+    <button id="rename-stale" type="button">Rename ada, leave the copies</button>
+    <button id="rename-fresh" type="button">Rename ada, update the copies</button>
+    <pre id="rename-out">Click a button.</pre>
+
+    <h2>Likes</h2>
+    <p>Most common use. One Postgres row per user and post. Redis holds a count when that number is hot and a short lag is acceptable.</p>
+    <p>Bob already likes post 1. A second Postgres insert returns the first row. A Redis member key increments once. A bare counter increments on every click. <code>record_like</code> runs each path.</p>
+    <button id="like-pg" type="button">Like again in Postgres</button>
+    <button id="like-redis" type="button">Like again with a member key</button>
+    <button id="like-counter" type="button">Like again with a bare counter</button>
+    <pre id="like-out">Click a button.</pre>
+
+    <h2>Partition key</h2>
+    <p>Most common use. Recent posts of one user use <code>user_id</code>. Shard by that key only after one Postgres is full. The index comes first.</p>
+    <p>Nova is user 7. All of her posts sit on one shard. Salt spreads those posts, and the read merges the shards. Four app servers still call that one shard. A read replica can serve the read. <code>partition_map</code> draws the map.</p>
+    <button id="partition" type="button">Place nova by user id and by salt</button>
+    <pre id="partition-out">Click the button.</pre>
+
+    <h2>Home feed</h2>
+    <p>Most common use. Build the home feed when the screen is "posts by people I follow." That query is not <code>user_id</code> of one author.</p>
+    <p>Bob follows Ada and Nova. A read asks both author shards and merges. An inbox copies each post onto Bob at write time, so his screen is one query. <code>home_feed</code> shows both.</p>
+    <button id="home" type="button">Read Bob's home feed both ways</button>
+    <pre id="home-out">Click the button.</pre>
+
+    <h2>Graph hops</h2>
+    <p>Most common use. Store follows as rows in Postgres. Two joins answer a friend of a friend.</p>
+    <p>Ada follows Bob. Bob follows Nova. <code>graph_hops</code> walks those edges in Postgres. The Graph button above reads the same hop from Neo4j.</p>
+    <button id="graph" type="button">Walk two hops from ada</button>
+    <pre id="graph-out">Click the button.</pre>
+
+    <script>
+      function show(id, data) {
+        const diagram = data.diagram ? data.diagram + "\n\n" : "";
+        document.getElementById(id).textContent = diagram + JSON.stringify(data, null, 2);
+      }
+
+      async function call(path, options) {
+        const response = await fetch(path, options);
+        return response.json();
+      }
+
+      document.getElementById("rename-stale").onclick = async () => {
+        await call("/api/reset", { method: "POST" });
+        show("rename-out", await call("/api/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 1, username: "ada_new", update_copies: false }),
+        }));
+      };
+
+      document.getElementById("rename-fresh").onclick = async () => {
+        await call("/api/reset", { method: "POST" });
+        show("rename-out", await call("/api/rename", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 1, username: "ada_new", update_copies: true }),
+        }));
+      };
+
+      async function like(store) {
+        await call("/api/reset", { method: "POST" });
+        show("like-out", await call("/api/likes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: 2, post_id: 1, store: store }),
+        }));
+      }
+
+      document.getElementById("like-pg").onclick = () => like("postgres");
+      document.getElementById("like-redis").onclick = () => like("redis_member");
+      document.getElementById("like-counter").onclick = () => like("redis_counter");
+      document.getElementById("partition").onclick = async () => {
+        show("partition-out", await call("/api/partition/7"));
+      };
+      document.getElementById("home").onclick = async () => {
+        show("home-out", await call("/api/home/2"));
+      };
+      document.getElementById("graph").onclick = async () => {
+        show("graph-out", await call("/api/graph/1"));
+      };
+
+      const engineIds = [
+        "relational",
+        "key-value",
+        "document",
+        "wide-column",
+        "columnar",
+        "graph",
+        "time-series",
+        "search",
+      ];
+
+      function esc(value) {
+        return String(value).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+      }
+
+      function renderShape(shape) {
+        if (!shape) return "";
+        if (shape.kind === "table") {
+          const head = shape.columns.map((name) => "<th>" + esc(name) + "</th>").join("");
+          const body = shape.rows.map((row) => "<tr>" + row.map((cell) => "<td>" + esc(cell) + "</td>").join("") + "</tr>").join("");
+          return "<table class='shape'><tr>" + head + "</tr>" + body + "</table>";
+        }
+        if (shape.kind === "pairs") {
+          return shape.pairs.map((pair) => "<div class='pair'><span class='key'>" + esc(pair.key) + "</span><span>→</span><span class='value'>" + esc(pair.value) + "</span></div>").join("");
+        }
+        if (shape.kind === "document") {
+          const doc = shape.document || {};
+          const moments = (doc.moments || []).map((item) => "<div class='moment'>" + esc(item.text) + " · " + esc(item.photos) + " photos</div>").join("");
+          const badge = doc.badge ? "<div class='field'>badge: " + esc(doc.badge) + "</div>" : "";
+          return "<div class='doc'><div class='field'>_id: " + esc(doc._id) + "</div><div class='field'>city: " + esc(doc.city) + "</div><div class='field'>signature: " + esc(doc.signature) + "</div>" + badge + "<div class='field'>moments</div>" + moments + "</div>";
+        }
+        if (shape.kind === "partitions") {
+          return shape.partitions.map((part) => {
+            const msgs = part.rows.map((row) => "<div class='msg'>" + esc(row.sent_at) + " " + esc(row.sender) + " " + esc(row.body) + "</div>").join("");
+            return "<div class='partition'><div class='pkey'>" + esc(part.key) + "</div>" + msgs + "</div>";
+          }).join("");
+        }
+        if (shape.kind === "columns") {
+          return "<div class='columns'>" + shape.columns.map((col) => {
+            const values = col.values.map((value) => "<div>" + esc(value) + "</div>").join("");
+            return "<div class='col'><h4>" + esc(col.name) + "</h4>" + values + "</div>";
+          }).join("") + "</div>";
+        }
+        if (shape.kind === "graph") {
+          return shape.edges.map((edge) => "<div class='edge'><b>" + esc(edge.from) + "</b> → <b>" + esc(edge.to) + "</b></div>").join("");
+        }
+        if (shape.kind === "series") {
+          const max = Math.max(...shape.points.map((point) => point.value), 1);
+          return shape.points.map((point) => "<div class='point'><span>" + esc(point.label) + "</span><span class='bar' style='width:" + Math.round(180 * point.value / max) + "px'></span><span>" + esc(point.value) + "</span></div>").join("");
+        }
+        if (shape.kind === "index") {
+          return shape.terms.map((term) => "<div class='term'><b>" + esc(term.term) + "</b> → message " + esc(term.ids.join(", ")) + "</div>").join("");
+        }
+        return "";
+      }
+
+      function showTab(kind) {
+        for (const id of engineIds) {
+          document.getElementById("panel-" + id).classList.toggle("on", id === kind);
+          document.getElementById("engine-" + id).setAttribute("aria-selected", id === kind ? "true" : "false");
+        }
+      }
+
+      async function loadEngine(kind, path, method) {
+        const data = await call(path, method ? { method: method } : undefined);
+        const shape = document.getElementById("shape-" + kind);
+        const result = document.getElementById("result-" + kind);
+        if (!data.ok) {
+          result.textContent = JSON.stringify(data, null, 2);
+          return;
+        }
+        shape.innerHTML = renderShape(data.shape);
+        const wrote = data.wrote ? "Write result: " + data.wrote.result + "\n\n" : "";
+        result.textContent = wrote + "Read result\n" + JSON.stringify(data.sample, null, 2);
+      }
+
+      for (const id of engineIds) {
+        document.getElementById("engine-" + id).onclick = async () => {
+          showTab(id);
+          await loadEngine(id, "/api/engines/" + id);
+        };
+        document.getElementById("read-" + id).onclick = () => loadEngine(id, "/api/engines/" + id);
+        document.getElementById("write-" + id).onclick = () => loadEngine(id, "/api/engines/" + id + "/write", "POST");
+      }
+
+      loadEngine("relational", "/api/engines/relational");
+    </script>
+  </body>
+</html>

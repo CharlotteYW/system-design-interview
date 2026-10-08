@@ -1,9 +1,145 @@
-# Local demo skeleton. Fill when this concept is prompted.
-# Default study stack: Python/FastAPI. Add Postgres, Redis, MinIO, Kafka, nginx
-# only if that concept actually needs them.
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://app:app@postgres:5432/app
+      REDIS_URL: redis://redis:6379/0
+      MONGO_URL: mongodb://mongo:27017
+      CASSANDRA_HOST: cassandra
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: app
+      NEO4J_URL: http://neo4j:7474
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: datamodel
+      TIMESCALE_URL: postgresql://app:app@timescale:5432/app
+      ELASTIC_URL: http://elasticsearch:9200
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      timescale:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
-# services:
-#   app:
-#     build: .
-#     ports:
-#       - "8000:8000"
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+
+  mongo:
+    image: mongo:7.0
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  cassandra:
+    image: cassandra:4.1
+    environment:
+      MAX_HEAP_SIZE: 768M
+      HEAP_NEWSIZE: 128M
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'SELECT now() FROM system.local'"]
+      interval: 15s
+      timeout: 20s
+      retries: 40
+      start_period: 90s
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    environment:
+      CLICKHOUSE_PASSWORD: app
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--password", "app", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+
+  neo4j:
+    image: neo4j:5.26
+    environment:
+      NEO4J_AUTH: neo4j/datamodel
+      NEO4J_server_memory_heap_initial__size: 256m
+      NEO4J_server_memory_heap_max__size: 512m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -a bolt://localhost:7687 -u neo4j -p datamodel 'RETURN 1'",
+        ]
+      interval: 10s
+      timeout: 15s
+      retries: 30
+      start_period: 40s
+
+  timescale:
+    image: timescale/timescaledb:2.16.1-pg16
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -sf http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 30s
