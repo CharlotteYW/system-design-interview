@@ -22,7 +22,7 @@ Follow `.cursor/rules/` in order:
 12. `11-stop-service-at-session-end.mdc` — when the user is done, ensure `scripts/stop.sh` exists and run it so Compose is not left up
 13. `12-prepare-a-concept.mdc` — core concepts and key technologies: explain variants, then a small demo (not the five-step product interview)
 14. `13-concept-folder.mdc` — required files under `core-concepts/` and `key-technologies/`
-15. `14-complete-deep-dive.mdc` — before closing a concept or question, teach the remaining interviewer probes at full depth and write them into the folder
+15. `14-complete-deep-dive.mdc` — before closing a concept or question, teach every Hello Interview deep dive for that page, then any extra probes, at full depth, and write them into the folder
 16. `15-simplified-technical-english.mdc` — explanations in chat and in study notes follow ASD-STE100
 17. `16-show-the-variants.mdc` — the lab shows each important variant side by side, and still names the interview default
 18. `17-high-level-by-requirement.mdc` — step 2 has one heading per functional requirement, with steps, options, and a choice; hot keys stay in the deep dive
@@ -45,7 +45,7 @@ Follow `12-prepare-a-concept.mdc`. Folders already exist as stubs. Fill the READ
 - Skip FAQ, FLOW, or COMPONENTS **on product questions**. Concept labs use the README comparison instead (`12-prepare-a-concept.mdc`).
 - Stop at design docs **for product questions**. If that local system is missing, implement it. Concept labs may stay **Notes-only** when a table is the whole lesson (`numbers-to-know`).
 - Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). Write those explanations in ASD-STE100 (`15-simplified-technical-english.mdc`).
-- Close a concept or question after the main path only. Teach the remaining probes first and write them down (`14-complete-deep-dive.mdc`).
+- Close a concept or question after the main path only. Teach every Hello Interview deep dive first, then extra probes, and write them down (`14-complete-deep-dive.mdc`).
 - Ship a lab that shows only the winning option. Show the variants side by side so the user can compare them (`16-show-the-variants.mdc`).
 - Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).
 - Skip the end-of-session Q&A. After the implementation summary, invite questions, answer them, and write them into FAQ/README (`10-end-of-session-questions.mdc`).

@@ -105,7 +105,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | Yelp | Easy | listed | Related to Proximity Service (Vol 2) |
 | Local Delivery Service | Easy | listed | |
 | Ticketmaster | Medium | listed | |
-| Instagram | Medium | listed | Related to news feed |
+| Instagram | Medium | listed | Same home-feed shape as news feed. The extra work is large photos and videos, and a much higher post rate. |
 | FB News Feed | Medium | [Implemented](questions/news-feed/) | |
 | Tinder | Medium | listed | |
 | LeetCode | Medium | listed | |

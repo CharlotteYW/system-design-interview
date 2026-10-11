@@ -9,9 +9,27 @@ A concept or question is not finished when the main path is chosen. Before the l
 
 Use the same depth as the sharding session (2026-10-03): adding a machine, a hot key, a write that spans two keys, and a filter that is not the shard key. For the next topic, name the equivalent probes (failure, scale, the operation the design made expensive, what changes when a number grows).
 
+## Hello Interview deep dives are the minimum
+
+Before steps 3 and 4, open the Hello Interview page for this question. List every heading in its Deep Dives section. Teach each heading in this session, at the depth below, in original words. Do not paste the page.
+
+Extra probes are allowed. A session that skips one of those headings is not finished. Do not wait for the user to name the heading.
+
+Write the list into the question README: the Hello Interview title, and the choice this session made for it. FAQ gets the same probes.
+
+If that question has no Hello Interview breakdown, say so in the README and use the probes in this file. For a core concept or key technology, use the deep-dive or follow-up headings on that Hello Interview page the same way.
+
+```
+Bad: Teach fan-out and skip the post cache because the user did not ask.
+
+Good: The feed page has a deep dive on a replicated post cache. Teach it
+even when the happy path leaves the cache off. Then add a local probe,
+such as a 5,000-read peak, when that probe is not already on the list.
+```
+
 ## Where it belongs
 
-- **Concept** (`12-prepare-a-concept.mdc`): a README section after the variant table and the interview default. Session notes record the Q&A.
+- **Concept** (`12-prepare-a-concept.mdc`): a README section after the variant table and the interview default. Session notes record the Q&A. Include every Hello Interview deep dive for that page.
 - **Question** (`06-interview-pattern.mdc`): steps 3 and 4. The data model and the happy API are not the deep dive. FAQ gets the same probes. Do not put these probes in step 2 in place of the per-requirement path (`17-high-level-by-requirement.mdc`).
 
 ## Depth for each probe

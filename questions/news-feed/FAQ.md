@@ -92,6 +92,9 @@ A: A private queue is still fan-out on write. Kim's publish would push post 42 o
 **Q: Can the top of the page show each database, so each action shows what it adds?** (2026-10-10)  
 A: Yes. The header lists Postgres users, follows, posts, likes, comments, and the inbox. It also lists Redis keys and the S3 links. A new or changed row is highlighted after the next action. The first paint is the baseline, so it does not mark every row.
 
+**Q: Is the Hello Interview Instagram breakdown the same question as this news feed?** (2026-10-10)  
+A: The three core lines match. A user creates a post, follows accounts, and reads a chronological feed of those accounts. This session also put likes, comments, and paging in scope. Their Instagram page leaves likes, comments, search, stories, and live video below the line. The scale on that page is about 500 million daily users and about 100 million posts a day. A photo can be about 8 MB and a video can be about 4 GB. This session locked 1 million daily users and about 200,000 posts a day, and it stored media links only. A second pass is useful for the large files and that higher post rate. The fan-out choice stays the one in this folder.
+
 **Q: Is the read path fan-out on read at low traffic, an inbox at high traffic, a skip for a famous account, Redis for that account's recent ids, and a replicated Post Cache later?** (2026-10-10)  
 A: Yes. Low traffic loads the accounts Lee follows, then their posts, and sorts. High traffic writes a normal account into an inbox table and keeps the newest 200 ids. A famous account skips the queue. The home read merges the inbox with Redis key `recent:{author_id}`. A Post Cache of the post text comes later, on several nodes that may each store the same hot post.
 
