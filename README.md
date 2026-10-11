@@ -76,7 +76,7 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | 3 | Unique ID generator | [questions/unique-id-generator](questions/unique-id-generator/) | Alex Xu Vol 1 Ch 7 · **Implemented** |
 | 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 · **Implemented** |
 | 5 | Notification system | [questions/notification-system](questions/notification-system/) | Hello Interview · Alex Xu Vol 1 Ch 10 |
-| 6 | News feed | [questions/news-feed](questions/news-feed/) | Hello Interview (FB News Feed) · Alex Xu Vol 1 Ch 11 |
+| 6 | News feed | [questions/news-feed](questions/news-feed/) | Hello Interview (FB News Feed) · Alex Xu Vol 1 Ch 11 · **Implemented** |
 | 7 | Chat system (WhatsApp) | [questions/chat-system](questions/chat-system/) | Hello Interview · Alex Xu Vol 1 Ch 12 |
 | 8 | YouTube | [questions/youtube](questions/youtube/) | Hello Interview · Alex Xu Vol 1 Ch 14 |
 | 9 | Web crawler | [questions/web-crawler](questions/web-crawler/) | Hello Interview · Alex Xu Vol 1 Ch 9 |
@@ -106,7 +106,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | Local Delivery Service | Easy | listed | |
 | Ticketmaster | Medium | listed | |
 | Instagram | Medium | listed | Related to news feed |
-| FB News Feed | Medium | [Stub](questions/news-feed/) | |
+| FB News Feed | Medium | [Implemented](questions/news-feed/) | |
 | Tinder | Medium | listed | |
 | LeetCode | Medium | listed | |
 | WhatsApp | Medium | [Stub](questions/chat-system/) | |
@@ -148,7 +148,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 8 | URL shortener | [Implemented](questions/url-shortener/) |
 | 9 | Web crawler | [Stub](questions/web-crawler/) |
 | 10 | Notification system | [Stub](questions/notification-system/) |
-| 11 | News feed | [Stub](questions/news-feed/) |
+| 11 | News feed | [Implemented](questions/news-feed/) |
 | 12 | Chat system | [Stub](questions/chat-system/) |
 | 13 | Search autocomplete | listed |
 | 14 | YouTube | [Stub](questions/youtube/) |

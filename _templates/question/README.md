@@ -45,7 +45,7 @@ GET    /v1/...
 
 ## 2. High-level design
 
-Summarize the request path and the main stores. Details belong in [FLOW.md](FLOW.md) and [COMPONENTS.md](COMPONENTS.md).
+Summarize the request path and the main stores. One heading per functional requirement. Details belong in [FLOW.md](FLOW.md) and [COMPONENTS.md](COMPONENTS.md). The study comparison belongs in `high-level-design-comparision.md`.
 
 ```mermaid
 flowchart LR

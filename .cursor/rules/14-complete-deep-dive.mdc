@@ -12,7 +12,7 @@ Use the same depth as the sharding session (2026-10-03): adding a machine, a hot
 ## Where it belongs
 
 - **Concept** (`12-prepare-a-concept.mdc`): a README section after the variant table and the interview default. Session notes record the Q&A.
-- **Question** (`06-interview-pattern.mdc`): steps 3 and 4. The data model and the happy API are not the deep dive. FAQ gets the same probes.
+- **Question** (`06-interview-pattern.mdc`): steps 3 and 4. The data model and the happy API are not the deep dive. FAQ gets the same probes. Do not put these probes in step 2 in place of the per-requirement path (`17-high-level-by-requirement.mdc`).
 
 ## Depth for each probe
 

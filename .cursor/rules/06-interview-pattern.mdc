@@ -8,7 +8,7 @@ alwaysApply: true
 When practicing **any** question, walk through these steps in order. Collaborate; do not dump a finished answer. Map them into `README.md` and `FAQ.md`.
 
 1. **Requirements and design scope.** Restate the problem. Gather functional and non-functional requirements. Put scale numbers on QPS, storage, latency. Say what is in and out of scope.
-2. **High-level design.** Sketch the end-to-end system (clients, APIs, services, stores). Get buy-in before diving. Details in `FLOW.md` and `COMPONENTS.md`.
+2. **High-level design.** Sketch the shared boxes, then one heading per functional requirement (`17-high-level-by-requirement.mdc`): steps, options, and the choice. Get buy-in before diving. Details in `FLOW.md` and `COMPONENTS.md`. Write `high-level-design-comparision.md` (`18-high-level-design-comparison.mdc`) before step 5. Leave hot keys and traffic spikes for steps 3 and 4. After step 4, write `final-design-flow.md` (`19-final-design-flow.mdc`). `FLOW.md` remains the interview sequences.
 3. **Low-level design and deep dive.** Data model, core algorithms, and the follow-up probes in `14-complete-deep-dive.mdc` (failure, the hot key, the operation that crosses a boundary). Each probe gets the full teach shape, not a one-line fix.
 4. **Component and special-situation questions.** Probe individual components (failure, consistency, APIs). Then scale shocks: 10x traffic, rush hour, hot keys, region loss. Same depth as step 3.
 5. **Summary and future improvements.** Recap the design, call out risks, and name what you would add with more time.

@@ -25,6 +25,9 @@ Follow `.cursor/rules/` in order:
 15. `14-complete-deep-dive.mdc` — before closing a concept or question, teach the remaining interviewer probes at full depth and write them into the folder
 16. `15-simplified-technical-english.mdc` — explanations in chat and in study notes follow ASD-STE100
 17. `16-show-the-variants.mdc` — the lab shows each important variant side by side, and still names the interview default
+18. `17-high-level-by-requirement.mdc` — step 2 has one heading per functional requirement, with steps, options, and a choice; hot keys stay in the deep dive
+19. `18-high-level-design-comparison.mdc` — each question writes `high-level-design-comparision.md` to compare Hello Interview, Alex Xu, this session, and production
+20. `19-final-design-flow.mdc` — each question keeps `FLOW.md` and writes `final-design-flow.md` with every service and every database schema
 
 ## New vs existing questions
 

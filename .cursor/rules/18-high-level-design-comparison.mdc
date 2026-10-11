@@ -1,0 +1,35 @@
+---
+description: Each question gets a study file that compares every feature, the database choice, and the high-level path
+alwaysApply: true
+---
+
+# High-level design comparison file
+
+After step 2 of a question (`17-high-level-by-requirement.mdc`), write `questions/<slug>/high-level-design-comparision.md`. The spelling of that file name stays `comparision`. Do this before step 5 and before the lab.
+
+The file is for the next study session. It does not replace `README.md`.
+
+Compare every functional requirement from step 1. A file that compares only one feature, such as only the home feed, is incomplete.
+
+## Required sections, in this order
+
+1. **Database choice.** One table. Each row is one kind of data (the post, the follow, the like, the comment, the home list, the media file, and any other row this design stores). Each column is a source. Name the database or store. If a source does not choose a store, write "not in that source."
+2. **High-level design choice.** The boxes on the happy path, and whether publish does the work now or through a queue.
+3. **One section per feature** from step 1, in the same order. For a news feed that includes post, follow, like, comment, and home feed. Each section has the steps and the store that feature uses.
+4. **What this session keeps,** with this session's numbers, and which source the happy path is closest to.
+5. **Sources.** Titles and links. Original sentences only. Do not paste Hello Interview or Alex Xu.
+
+## Sources in every table
+
+1. Hello Interview for this question.
+2. The Alex Xu chapter cited in the question README.
+3. The approach this session locked for the happy path.
+4. Production. Use a vendor engineering post or a named conference talk. If no public source exists, say so. Do not invent a cutoff, a store, or a diagram.
+
+Write the notes in ASD-STE100 (`15-simplified-technical-english.mdc`).
+
+## Bad vs good
+
+Bad: one home-feed table and a line that says "we follow Alex Xu."
+
+Good: the database table names Postgres, DynamoDB, a graph store, Redis, or "not in that source" on every row. The post, follow, like, comment, and home-feed sections each have steps and a store.

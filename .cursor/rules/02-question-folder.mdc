@@ -8,9 +8,11 @@ alwaysApply: false
 
 Every `questions/<slug>/` folder must include:
 
-- `README.md` — five interview steps plus **What we implemented**; include options/tradeoffs taught in the session, not only the chosen path
+- `README.md` — five interview steps plus **What we implemented**; step 2 has one heading per functional requirement (`17-high-level-by-requirement.mdc`); include options/tradeoffs taught in the session, not only the chosen path
 - `FAQ.md` — Q&A in the five steps, plus **Session questions** (user questions from the end of practice and the answers)
-- `FLOW.md` — mermaid flowchart and/or sequence diagrams for happy path, writes, reads, failure
+- `FLOW.md` — one chart per feature, client to load balancer to gateway to the named service to the named database (`19-final-design-flow.mdc`)
+- `final-design-flow.md` — end picture: request paths, each service and its job, each database type and schema (`19-final-design-flow.mdc`)
+- `high-level-design-comparision.md` — study comparison of the important features across Hello Interview, Alex Xu, this session, and production (`18-high-level-design-comparison.mdc`)
 - `COMPONENTS.md` — each important piece: definition + role in *this* design
 - `docker-compose.yml` — local mocked components (app UI + API, database, extras)
 - `scripts/setup.sh` — activate `system-design-interview` venv, then bring frontend, backend, and data stores up

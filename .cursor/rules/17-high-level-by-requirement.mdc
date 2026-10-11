@@ -1,0 +1,32 @@
+---
+description: Step 2 lists every functional requirement with steps, options, and a choice
+alwaysApply: true
+---
+
+# High-level design, one requirement at a time
+
+Step 2 of `06-interview-pattern.mdc` is the happy path for every functional requirement from step 1. A hot key, a traffic spike, and a huge table stay in steps 3 and 4 (`14-complete-deep-dive.mdc`).
+
+Cite Hello Interview or Alex Xu for the shape. Do not paste their write-up.
+
+## In the chat and in README section 2
+
+After the shared boxes (client, load balancer, API, stores), give one heading per functional requirement. Use the same order as step 1.
+
+Each heading has:
+
+1. The steps, in order. Name the caller, the store, and the result.
+2. A choice table when more than one design works. At least two rows, including the simple path. Say what happens and when it wins.
+3. The choice for this interview, and the number that justifies it.
+
+An API line or a box on the diagram does not finish a requirement.
+
+## Bad vs good
+
+Bad: one paragraph says the API creates a post, follows an account, and reads the feed, plus one fan-out table.
+
+Good: "Create a post" lists the upload and the insert. "Follow" lists the pair insert. "Home feed" lists load follows, load posts, and sort. "Page the feed" lists the cursor. A like and a comment are their own headings when they are in scope. The hot like count and the 5,000-read hybrid stay in step 4.
+
+Write one sequence per requirement in `FLOW.md`. In `FAQ.md` step 2, answer a walk-through of each requirement.
+
+Then write `high-level-design-comparision.md` (`18-high-level-design-comparison.mdc`) before step 5.

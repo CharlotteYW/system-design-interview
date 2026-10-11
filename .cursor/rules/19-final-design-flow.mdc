@@ -1,0 +1,42 @@
+---
+description: Each question keeps FLOW.md and a final-design-flow.md with every service and every database schema
+alwaysApply: true
+---
+
+# Final design flow
+
+Every question keeps both files. Write `final-design-flow.md` after steps 1–4 are taught, before step 5 and before the lab. `FLOW.md` stays the interview path. The final file is the picture you redraw at the end.
+
+## Every flow chart
+
+`FLOW.md` and `final-design-flow.md` use the same drawing rule. Cite Hello Interview for the shape. Do not paste their diagram.
+
+Each functional requirement has its own chart. The arrows run in this order:
+
+1. Client
+2. Load balancer
+3. API gateway
+4. The named service that owns the feature
+5. The named database that service reads or writes
+
+A chart that stops at one box called API is incomplete when the design has named services. A chart that stops at the service and skips the database is incomplete too.
+
+## FLOW.md
+
+One overview chart, then one chart per functional requirement, plus one failure path. This file can grow during the interview. It does not have to list every column.
+
+## final-design-flow.md
+
+1. The same overview, from the client to the gateway, the services, and the databases. Mark which boxes exist only on a shock path.
+2. One short request sequence per functional requirement from step 1. Each sequence includes the gateway, the service, and the database.
+3. **Services.** One row per service. Columns: name, when it runs, what it does. Include the gateway. A design with one API lists that one API and names each function inside it.
+4. **Databases.** One section per database. Name the type (Postgres, Redis, S3, and so on). Give the schema: table or key, columns or fields, and the primary key. A shock-only table is labeled as shock-only.
+5. A line that points back to `FLOW.md` and `COMPONENTS.md`.
+
+Write the notes in ASD-STE100 (`15-simplified-technical-english.mdc`). Original notes only.
+
+## Bad vs good
+
+Bad: one box called API, with no path from the client through a named service into a named database.
+
+Good: Post, Follow, Like, Comment, and Feed are separate rows when the design splits them. Each row names the tables that service owns. Postgres lists `users`, `follows`, `posts`, `likes`, `comments`, and the shock-only `inbox` with keys. S3 and Redis each have their own section.

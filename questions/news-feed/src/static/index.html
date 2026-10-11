@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>News feed</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, sans-serif; margin: 0; line-height: 1.4; }
+      header, main { padding: 1rem 1.25rem; }
+      header { border-bottom: 1px solid #8884; }
+      h1 { margin: 0 0 0.25rem; }
+      .row { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: end; }
+      label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.9rem; }
+      input, select, button, textarea { font: inherit; padding: 0.4rem 0.5rem; }
+      textarea { min-width: 16rem; }
+      .modes { display: grid; grid-template-columns: repeat(3, minmax(16rem, 1fr)); gap: 1rem; }
+      article, .trace { border: 1px solid #8884; border-radius: 8px; padding: 0.75rem; margin-top: 0.75rem; }
+      .meta { color: #666; font-size: 0.85rem; }
+      .default { outline: 2px solid #2a6; }
+      img, video { max-width: 100%; max-height: 10rem; }
+      .error { color: #b00020; }
+      .stores { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+      .store { border: 1px solid #8884; border-radius: 8px; padding: 0.5rem 0.75rem; max-height: 16rem; overflow: auto; }
+      .store h2 { margin: 0 0 0.35rem; font-size: 1rem; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+      th, td { text-align: left; padding: 0.15rem 0.3rem; border-bottom: 1px solid #8883; vertical-align: top; }
+      tr.changed { background: #2a62; }
+      @media (max-width: 900px) { .modes { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>News feed</h1>
+      <p>Interview default: <strong>fan-out on read</strong>. The other two columns stay so you can compare them. Bea is the famous account.</p>
+      <div class="row">
+        <label>You are
+          <select id="me">
+            <option value="1">Lee</option>
+            <option value="2">Kim</option>
+            <option value="3">Ada</option>
+            <option value="4">Bea (famous)</option>
+          </select>
+        </label>
+      </div>
+      <div id="stores" class="stores" aria-live="polite"></div>
+    </header>
+    <main>
+      <h2>Create a post</h2>
+      <form id="post-form" class="row">
+        <label>Text <textarea id="content" required>Hello from the lab.</textarea></label>
+        <label>Image link <input id="image" type="url" placeholder="https://example.com/photo.jpg" /></label>
+        <label>Video link <input id="video" type="url" placeholder="https://example.com/clip.mp4" /></label>
+        <button type="submit">Publish</button>
+      </form>
+      <div class="row" id="follows"></div>
+      <div id="action-trace" class="trace">Publish, follow, like, or comment. This box names the service and the database.</div>
+      <h2>Home</h2>
+      <div class="modes">
+        <section id="read" class="default">
+          <h3>Fan-out on read</h3>
+          <p class="meta">Default. Feed service asks Follow service, then Post service.</p>
+          <div class="cards"></div>
+          <button type="button" data-more="read">Next page</button>
+        </section>
+        <section id="write">
+          <h3>Fan-out on write</h3>
+          <p class="meta">Feed service reads the Postgres inbox.</p>
+          <div class="cards"></div>
+          <button type="button" data-more="write">Next page</button>
+        </section>
+        <section id="hybrid">
+          <h3>Hybrid</h3>
+          <p class="meta">Inbox for a normal account. Posts table for Bea.</p>
+          <div class="cards"></div>
+          <button type="button" data-more="hybrid">Next page</button>
+        </section>
+      </div>
+    </main>
+    <script>
+      const me = document.querySelector("#me");
+      const cursors = { read: null, write: null, hybrid: null };
+      let previousRows = {};
+
+      function cell(value) {
+        if (Array.isArray(value)) return value.join(", ");
+        if (value === true) return "yes";
+        if (value === false) return "no";
+        return value ?? "";
+      }
+
+      function table(name, rows) {
+        const prior = previousRows[name] || new Set();
+        const next = new Set();
+        if (!rows.length) return `<p class="meta">No rows.</p>`;
+        const keys = Object.keys(rows[0]);
+        const body = rows.map((row) => {
+          const mark = JSON.stringify(row);
+          next.add(mark);
+          const changed = prior.size && !prior.has(mark) ? "changed" : "";
+          return `<tr class="${changed}">${keys.map((key) => `<td>${cell(row[key])}</td>`).join("")}</tr>`;
+        }).join("");
+        previousRows[name] = next;
+        return `<table><thead><tr>${keys.map((key) => `<th>${key}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
+      }
+
+      async function loadStores() {
+        const response = await fetch("/v1/stores");
+        const body = await response.json();
+        const counts = body.postgres.counts;
+        const tables = body.postgres.tables;
+        const blocks = [
+          ["Postgres users", counts.users, tables.users],
+          ["Postgres follows", counts.follows, tables.follows],
+          ["Postgres posts", counts.posts, tables.posts],
+          ["Postgres likes", counts.likes, tables.likes],
+          ["Postgres comments", counts.comments, tables.comments],
+          ["Postgres inbox", counts.inbox, tables.inbox],
+        ];
+        const html = blocks.map(([title, count, rows]) =>
+          `<section class="store"><h2>${title}</h2><p class="meta">${count} rows. Newest rows are first where the list is long.</p>${table(title, rows)}</section>`
+        ).join("");
+        const redisRows = body.redis.length ? body.redis : [];
+        const s3Rows = body.s3.map((link) => ({ link }));
+        document.querySelector("#stores").innerHTML = html +
+          `<section class="store"><h2>Redis</h2><p class="meta">${body.redis.length} keys.</p>${table("Redis", redisRows)}</section>` +
+          `<section class="store"><h2>S3 links</h2><p class="meta">${body.s3.length} links. The lab stores the link, not the file bytes.</p>${table("S3 links", s3Rows)}</section>`;
+      }
+      const headers = () => ({ "Content-Type": "application/json", "X-User-Id": me.value });
+
+      function showTrace(trace) {
+        const box = document.querySelector("#action-trace");
+        box.innerHTML = (trace || []).map((step) => `<p><strong>${step.service}</strong> · ${step.store}<br>${step.detail}</p>`).join("");
+      }
+
+      function card(post) {
+        const images = (post.image_links || []).map((url) => `<img alt="" src="${url}">`).join("");
+        const videos = (post.video_links || []).map((url) => `<video controls src="${url}"></video>`).join("");
+        return `<article>
+          <strong>${post.user_name}</strong>
+          <span class="meta">${post.famous ? " · famous" : ""} · ${post.source}</span>
+          <p>${post.content}</p>
+          ${images}${videos}
+          <p class="meta">Postgres likes ${post.like_count} · Redis likes ${post.redis_like_count}</p>
+          <button type="button" data-like="${post.id}">Like</button>
+          <form data-comment="${post.id}">
+            <input name="text" placeholder="Comment" required>
+            <button type="submit">Comment</button>
+          </form>
+        </article>`;
+      }
+
+      async function load(mode, append) {
+        const cursor = append ? cursors[mode] : null;
+        const query = new URLSearchParams({ mode, limit: "2" });
+        if (cursor) query.set("cursor", cursor);
+        const response = await fetch(`/v1/home?${query}`, { headers: headers() });
+        const body = await response.json();
+        if (!response.ok) {
+          showTrace([{ service: "Gateway", store: "none", detail: body.detail || "Request failed." }]);
+          return;
+        }
+        const section = document.querySelector(`#${mode} .cards`);
+        const html = body.items.map(card).join("") || "<p>No posts on this page.</p>";
+        section.innerHTML = append ? section.innerHTML + html : html;
+        cursors[mode] = body.next_cursor;
+        wire(section);
+        return body;
+      }
+
+      function wire(scope) {
+        scope.querySelectorAll("[data-like]").forEach((button) => {
+          button.onclick = async () => {
+            const response = await fetch(`/v1/posts/${button.dataset.like}/likes`, { method: "POST", headers: headers() });
+            const body = await response.json();
+            showTrace(body.trace || [{ service: "Like service", store: "Postgres", detail: body.detail }]);
+            await refresh();
+          };
+        });
+        scope.querySelectorAll("form[data-comment]").forEach((form) => {
+          form.onsubmit = async (event) => {
+            event.preventDefault();
+            const response = await fetch(`/v1/posts/${form.dataset.comment}/comments`, {
+              method: "POST",
+              headers: headers(),
+              body: JSON.stringify({ content: new FormData(form).get("text") }),
+            });
+            const body = await response.json();
+            showTrace(body.trace || [{ service: "Comment service", store: "Postgres", detail: body.detail }]);
+            form.reset();
+          };
+        });
+      }
+
+      async function refresh() {
+        cursors.read = cursors.write = cursors.hybrid = null;
+        const [readBody] = await Promise.all([load("read", false), load("write", false), load("hybrid", false), loadStores()]);
+        return readBody;
+      }
+
+      document.querySelector("#post-form").onsubmit = async (event) => {
+        event.preventDefault();
+        const image = document.querySelector("#image").value.trim();
+        const video = document.querySelector("#video").value.trim();
+        const response = await fetch("/v1/posts", {
+          method: "POST",
+          headers: headers(),
+          body: JSON.stringify({
+            content: document.querySelector("#content").value,
+            image_links: image ? [image] : [],
+            video_links: video ? [video] : [],
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok) {
+          showTrace([{ service: "Post service", store: "Postgres posts", detail: body.detail }]);
+          return;
+        }
+        showTrace(body.trace);
+        await refresh();
+      };
+
+      async function renderFollows() {
+        const response = await fetch("/v1/users");
+        const body = await response.json();
+        const box = document.querySelector("#follows");
+        box.innerHTML = (body.users || [])
+          .filter((user) => String(user.id) !== me.value)
+          .map((user) => `<button type="button" data-follow="${user.id}">Follow ${user.user_name}</button>`)
+          .join("");
+        box.querySelectorAll("[data-follow]").forEach((button) => {
+          button.onclick = async () => {
+            const response = await fetch(`/v1/users/${button.dataset.follow}/follow`, { method: "POST", headers: headers() });
+            const result = await response.json();
+            showTrace(result.trace || [{ service: "Follow service", store: "Postgres follows", detail: result.detail }]);
+            await refresh();
+          };
+        });
+      }
+
+      document.querySelectorAll("[data-more]").forEach((button) => {
+        button.onclick = () => load(button.dataset.more, true);
+      });
+      me.onchange = async () => {
+        await renderFollows();
+        const body = await refresh();
+        if (body) showTrace(body.trace);
+      };
+      me.onchange();
+    </script>
+  </body>
+</html>
