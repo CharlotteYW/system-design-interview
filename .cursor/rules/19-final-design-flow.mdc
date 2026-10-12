@@ -21,6 +21,8 @@ Each functional requirement has its own chart. The arrows run in this order:
 
 A chart that stops at one box called API is incomplete when the design has named services. A chart that stops at the service and skips the database is incomplete too.
 
+Next to each feature chart, show the API shape for that call (`21-api-shape.mdc`). Include the method, the path, the response, and the body.
+
 ## FLOW.md
 
 One overview chart, then one chart per functional requirement, plus one failure path. This file can grow during the interview. It does not have to list every column.

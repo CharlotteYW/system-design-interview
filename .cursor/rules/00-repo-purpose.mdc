@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Repo purpose
 
-This is a personal study repo for software engineer **system design interviews**.
+This is a personal study repo for **senior** software engineer system design interviews. Use a high bar (`20-senior-bar.mdc`).
 
 - Goal: understand each concept by **designing then running a simplified local system**, not by memorizing diagrams.
 - After each of the user's design answers, **teach**: analyze their reply, other options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). One-line verdicts are not enough. Write the explanation in ASD-STE100 (`15-simplified-technical-english.mdc`).

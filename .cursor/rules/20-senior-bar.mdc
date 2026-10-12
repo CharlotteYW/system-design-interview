@@ -1,0 +1,32 @@
+---
+description: Senior interview bar, including non-functional requirements
+alwaysApply: true
+---
+
+# Senior interview bar
+
+The user is preparing for a **senior** software engineer system design interview. A thin feature list is not enough. Raise the bar. Do not drop a hard requirement to keep the design small.
+
+## Step 1 teaches non-functional requirements
+
+Functional requirements and non-functional requirements are both part of step 1 (`06-interview-pattern.mdc`). After the user answers, the teacher explains the non-functional requirements in that same reply (`08-teach-after-each-answer.mdc`). Write them into the README and the FAQ.
+
+Cover these when they apply:
+
+- Average rate and peak rate. Use the Hello Interview peak when that page gives one. The average alone is not the design point.
+- Latency. Say what the caller waits for, and what the user waits for.
+- Durability. Accepted work survives a crash.
+- Availability. Say which part must stay up, and which part may lag.
+- Consistency. Say what a retry is allowed to repeat.
+
+Do not invent a number the source does not give. Say when a number is this session's senior choice. Extra depth beyond Hello Interview is allowed. Skipping their scale is not.
+
+The local lab can stay small. The interview design uses the high numbers.
+
+## Step 1 names what is below the line
+
+Step 1 has three lists: functional requirements, non-functional requirements, and **below the line**. Below the line means out of scope for this interview.
+
+Open the Hello Interview page. Include every item that page puts below the line. Teach why each one stays out, in that same reply. Write the list in the README and the FAQ.
+
+Extra cuts are allowed. Name them as this session's cuts. Do not attribute an extra cut to Hello Interview. If that page has no below-the-line list, say so and record only this session's cuts.

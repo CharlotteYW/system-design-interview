@@ -28,6 +28,8 @@ Follow `.cursor/rules/` in order:
 18. `17-high-level-by-requirement.mdc` — step 2 has one heading per functional requirement, with steps, options, and a choice; hot keys stay in the deep dive
 19. `18-high-level-design-comparison.mdc` — each question writes `high-level-design-comparision.md` to compare Hello Interview, Alex Xu, this session, and production
 20. `19-final-design-flow.mdc` — each question keeps `FLOW.md` and writes `final-design-flow.md` with every service and every database schema
+21. `20-senior-bar.mdc` — senior bar: step 1 teaches non-functional requirements and names every Hello Interview below-the-line item
+22. `21-api-shape.mdc` — each call shows method, path, body, and response in the README, the flow, and the lab page
 
 ## New vs existing questions
 
@@ -44,7 +46,7 @@ Follow `12-prepare-a-concept.mdc`. Folders already exist as stubs. Fill the READ
 - Spin up cloud accounts. Mock components with local Docker.
 - Skip FAQ, FLOW, or COMPONENTS **on product questions**. Concept labs use the README comparison instead (`12-prepare-a-concept.mdc`).
 - Stop at design docs **for product questions**. If that local system is missing, implement it. Concept labs may stay **Notes-only** when a table is the whole lesson (`numbers-to-know`).
-- Answer the user's design with a one-line verdict. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). Write those explanations in ASD-STE100 (`15-simplified-technical-english.mdc`).
+- Answer the user's design with a one-line verdict or a compressed paragraph per shock. After each step, teach options, tradeoffs, and why we chose this (`08-teach-after-each-answer.mdc`). Each question gets its own block. Options are a labeled list (`Option A`, `Option B`), then a line that names the pick. Each option says what happens, the cost, and when it wins, on a concrete case, so the user can retell it. On step 1, teach the non-functional requirements in that reply (`20-senior-bar.mdc`). Write those explanations in ASD-STE100 (`15-simplified-technical-english.mdc`).
 - Close a concept or question after the main path only. Teach every Hello Interview deep dive first, then extra probes, and write them down (`14-complete-deep-dive.mdc`).
 - Ship a lab that shows only the winning option. Show the variants side by side so the user can compare them (`16-show-the-variants.mdc`).
 - Leave an already-Implemented folder unchanged after we practice it again. Update docs and code from the latest conversation (`09-update-on-repractice.mdc`).

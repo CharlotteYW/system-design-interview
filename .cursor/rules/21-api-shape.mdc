@@ -1,0 +1,35 @@
+---
+description: Show each API request and response shape in the docs and in the lab UI
+alwaysApply: true
+---
+
+# API shape
+
+Every question shows the real HTTP shape for each call. A path with no body and no response is not enough.
+
+## Where it appears
+
+- `README.md`, in the API section of step 1.
+- `FLOW.md`, next to the chart for that feature.
+- `final-design-flow.md`, next to that feature's sequence.
+- The lab page, when the app is built. Each action shows the request and the response that this call actually sent. The user can read the fields. A button with no body on screen is not enough.
+
+## Shape
+
+Use this layout. One block per call. Comments may name an allowed value or a default.
+
+```
+POST /v1/notices -> 202 Accepted { id, status }
+Body: {
+  userId,
+  channel,       // push | email | sms
+  content,       // { title, body }
+  scheduledAt    // optional, defaults to now
+}
+```
+
+`push` is the phone app notification. The fields match the design this session locked. Do not invent a second path that the service does not implement.
+
+Use 200 when the write is finished in that call. Use 202 when the call only accepts the work and a worker finishes it later. The body still returns the id and the status.
+
+Write the notes in ASD-STE100 (`15-simplified-technical-english.mdc`). The JSON field names stay in the shape above.

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Notification system</title>
+  <style>
+    body { font-family: Georgia, serif; margin: 24px; color: #1c1917; background: #faf7f2; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 8px; }
+    p { max-width: 70rem; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .card { background: #fff; border: 1px solid #e7e5e4; padding: 12px; }
+    label { display: block; font-size: 0.85rem; margin-top: 8px; }
+    input, select, button { font: inherit; }
+    input, select { width: 100%; box-sizing: border-box; }
+    button { margin-top: 10px; }
+    pre { background: #1c1917; color: #faf7f2; padding: 8px; overflow: auto; font-size: 0.75rem; min-height: 7rem; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.8rem; }
+    td, th { border-bottom: 1px solid #e7e5e4; text-align: left; padding: 4px; }
+    .note { font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <h1>Notification system</h1>
+  <p class="note">Interview default: the API commits a schedule row and returns 202. The scheduler publishes the notice id. High uses <code>notices-high</code>. A campaign uses <code>notices-low</code>. Redis lists stand in for Kafka. The vendor is a log.</p>
+  <div class="grid">
+    <section class="card">
+      <h2>High notice</h2>
+      <p class="note">Option we run. A login code. Priority high.</p>
+      <label>User <input id="highUser" value="lee" /></label>
+      <label>Body <input id="highBody" value="482913" /></label>
+      <label>Key <input id="highKey" value="login-lee-1" /></label>
+      <button id="sendHigh">POST /v1/notices</button>
+      <pre id="highTrace">Request and response appear here.</pre>
+    </section>
+    <section class="card">
+      <h2>Low notice</h2>
+      <p class="note">Same API. Priority low. Topic notices-low.</p>
+      <label>User <input id="lowUser" value="kim" /></label>
+      <label>Body <input id="lowBody" value="Your weekly note" /></label>
+      <label>Key <input id="lowKey" value="note-kim-1" /></label>
+      <button id="sendLow">POST /v1/notices</button>
+      <pre id="lowTrace">Request and response appear here.</pre>
+    </section>
+    <section class="card">
+      <h2>Campaign</h2>
+      <p class="note">One row, then the expander. Cancel stops later sends.</p>
+      <label>Users <input id="campUsers" value="lee,kim" /></label>
+      <label>Body <input id="campBody" value="Spring promo" /></label>
+      <label>Key <input id="campKey" value="promo-1" /></label>
+      <button id="sendCamp">POST /v1/campaigns</button>
+      <button id="cancelCamp">POST /v1/campaigns/{id}/cancel</button>
+      <pre id="campTrace">Request and response appear here.</pre>
+    </section>
+  </div>
+  <div class="grid" style="margin-top:16px">
+    <section class="card">
+      <h2>Contact and preference</h2>
+      <label>User <input id="prefUser" value="lee" /></label>
+      <label>Phone <input id="phone" value="+15550001111" /></label>
+      <label>SMS <select id="smsOn"><option value="true">on</option><option value="false">off</option></select></label>
+      <button id="saveContact">PUT contact</button>
+      <button id="savePref">PUT preferences</button>
+      <pre id="prefTrace">Request and response appear here.</pre>
+    </section>
+    <section class="card">
+      <h2>Topics and Twilio tokens</h2>
+      <pre id="topics">Waiting for state.</pre>
+    </section>
+    <section class="card">
+      <h2>Notices</h2>
+      <table>
+        <thead><tr><th>User</th><th>Priority</th><th>Topic</th><th>Status</th></tr></thead>
+        <tbody id="noticeRows"></tbody>
+      </table>
+    </section>
+  </div>
+  <script>
+    let lastCampaignId = "";
+
+    function show(id, method, path, body, response) {
+      const text = method + " " + path + " -> " + response.status + "\n"
+        + "Body: " + JSON.stringify(body, null, 2) + "\n"
+        + "Response: " + JSON.stringify(response.body, null, 2);
+      document.getElementById(id).textContent = text;
+    }
+
+    async function callApi(traceId, method, path, body) {
+      const response = await fetch(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await response.json();
+      show(traceId, method, path, body, { status: response.status, body: payload });
+      return payload;
+    }
+
+    document.getElementById("sendHigh").onclick = () => callApi("highTrace", "POST", "/v1/notices", {
+      userId: document.getElementById("highUser").value,
+      channel: "sms",
+      content: { title: "Code", body: document.getElementById("highBody").value },
+      priority: "high",
+      idempotencyKey: document.getElementById("highKey").value,
+    });
+
+    document.getElementById("sendLow").onclick = () => callApi("lowTrace", "POST", "/v1/notices", {
+      userId: document.getElementById("lowUser").value,
+      channel: "sms",
+      content: { title: "Note", body: document.getElementById("lowBody").value },
+      priority: "low",
+      idempotencyKey: document.getElementById("lowKey").value,
+    });
+
+    document.getElementById("sendCamp").onclick = async () => {
+      const payload = await callApi("campTrace", "POST", "/v1/campaigns", {
+        userIds: document.getElementById("campUsers").value.split(",").map((item) => item.trim()),
+        channel: "sms",
+        content: { title: "Promo", body: document.getElementById("campBody").value },
+        idempotencyKey: document.getElementById("campKey").value,
+      });
+      lastCampaignId = payload.id || "";
+    };
+
+    document.getElementById("cancelCamp").onclick = () => {
+      if (!lastCampaignId) {
+        document.getElementById("campTrace").textContent = "Send a campaign first.";
+        return;
+      }
+      callApi("campTrace", "POST", "/v1/campaigns/" + lastCampaignId + "/cancel", {});
+    };
+
+    document.getElementById("saveContact").onclick = () => {
+      const userId = document.getElementById("prefUser").value;
+      callApi("prefTrace", "PUT", "/v1/users/" + userId + "/contact", {
+        email: userId + "@example.com",
+        phone: document.getElementById("phone").value,
+        deviceToken: "token-" + userId,
+      });
+    };
+
+    document.getElementById("savePref").onclick = () => {
+      const userId = document.getElementById("prefUser").value;
+      callApi("prefTrace", "PUT", "/v1/users/" + userId + "/preferences", {
+        push: true,
+        email: true,
+        sms: document.getElementById("smsOn").value === "true",
+        quietStart: "",
+        quietEnd: "",
+      });
+    };
+
+    async function refresh() {
+      const response = await fetch("/v1/lab/state");
+      const state = await response.json();
+      document.getElementById("topics").textContent = JSON.stringify({
+        topics: state.topics,
+        twilio: state.budgets.twilio,
+      }, null, 2);
+      const rows = document.getElementById("noticeRows");
+      rows.innerHTML = "";
+      for (const notice of state.notices) {
+        const tr = document.createElement("tr");
+        tr.innerHTML = "<td>" + notice.user_id + "</td><td>" + notice.priority
+          + "</td><td>" + (notice.topic || "") + "</td><td>" + notice.status + "</td>";
+        rows.appendChild(tr);
+      }
+    }
+    refresh();
+    setInterval(refresh, 1000);
+  </script>
+</body>
+</html>

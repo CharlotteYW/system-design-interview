@@ -18,12 +18,27 @@ For **each** of their replies, write a teacher response that is long enough to l
 5. **Choice and basis.** Which option we take for *this* interview and *this* local system, and the numbers/constraints that justify it.
 6. **What to do next operationally** if they named a lever (e.g. cache): how to apply it, what to add after, what not to do.
 
+## Clear enough to retell
+
+The user must be able to retell the story and the choices without opening the notes. A compressed verdict is not that lesson.
+
+- One question, one shock, or one component gets its own block. Do not fold several shocks into one short paragraph each.
+- Put the options in one labeled list. Start each item with `Option A`, `Option B`, and so on. Under that label, say what happens, the cost, and when it wins. Do not leave the options as unmarked paragraphs.
+- After the list, one line names the pick: `We pick Option B` and the number that justifies it. A table may repeat the same labels. A table alone is not the lesson.
+- Use one concrete case (a named user, a notice id, a rate). Say who is touched and what that person or caller sees.
+- State the option we pick and the number that justifies it. Then state what the other options cost at that number.
+- Define a new term the first time you use it in that answer.
+
 ## Bad vs good
 
 Bad: “10× redirects. L1 + Redis is the right lever. Extra app servers without a cache still stampede Postgres.”
 
 Good: analyze their cache idea; explain stampede vs connection pressure; compare (scale app only) vs (Redis) vs (L1+L2) vs (CDN 302) vs (read replicas); pick L1+Redis for this design because redirects are read-heavy and a few keys dominate; say what to do after cache (then scale app); say we skip CDN/replicas in the local build.
 
-Apply this to **all four design steps** and to every follow-up probe in `14-complete-deep-dive.mdc`. Stay original; cite Hello Interview / Alex Xu, do not paste them. Do not treat the topic as done when only the main path has been taught.
+Bad: five shocks in five tight paragraphs, with the options only inside a table.
+
+Good: each shock has a story, then each option in sentences, then the pick and the number.
+
+Apply this to **all four design steps** and to every follow-up probe in `14-complete-deep-dive.mdc`. On step 1, teach the non-functional requirements and each below-the-line item in that same reply (`20-senior-bar.mdc`). Stay original; cite Hello Interview / Alex Xu, do not paste them. Do not treat the topic as done when only the main path has been taught.
 
 After implementation and passing tests, close with a **what we implemented** summary (chat + README), then follow `10-end-of-session-questions.mdc`: invite the user’s questions, answer them, and record Q&A for next time.
