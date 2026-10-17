@@ -1,21 +1,60 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
-
+# Design 1 (port 8000): messages and cursors in Postgres.
+# Design 2 (port 8001): messages and cursors in Cassandra. Roster stays in Postgres.
+# Each design has its own Redis so Pub/Sub channels do not cross.
 services:
   app:
     build: .
     ports:
       - "8000:8000"
     environment:
+      DESIGN: postgres
       DATABASE_URL: postgresql://app:app@postgres:5432/app
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
-    # profiles: ["not-implemented"]
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app-cassandra:
+    build: .
+    ports:
+      - "8001:8000"
+    environment:
+      DESIGN: cassandra
+      DATABASE_URL: postgresql://app:app@postgres:5432/app_cs
+      REDIS_URL: redis://redis-cs:6379/0
+      CASSANDRA_HOSTS: cassandra
+      CASSANDRA_BUCKET_SIZE: "5"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-cs:
+        condition: service_healthy
+      cassandra:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 40
 
   postgres:
     image: postgres:16-alpine
@@ -23,16 +62,45 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
+    volumes:
+      - chat_pg:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
       interval: 5s
       timeout: 5s
-      retries: 5
-    # profiles: ["not-implemented"]
+      retries: 10
 
   redis:
     image: redis:7-alpine
-    # profiles: ["not-implemented"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-# volumes:
-#   pgdata:
+  redis-cs:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  cassandra:
+    image: cassandra:4.1
+    environment:
+      MAX_HEAP_SIZE: 512M
+      HEAP_NEWSIZE: 128M
+      CASSANDRA_CLUSTER_NAME: chat-lab
+    volumes:
+      - chat_cs:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      start_period: 40s
+      retries: 30
+
+volumes:
+  chat_pg:
+  chat_cs:

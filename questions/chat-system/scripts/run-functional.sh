@@ -6,9 +6,9 @@ QUESTION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${REPO_ROOT}/scripts/use-venv.sh"
 
-echo "Not implemented yet."
-echo "When this question is prepared, this script will run functional tests of user-visible flows:"
-echo "  - exercise the real UI and/or the HTTP API the UI uses"
-echo "  - cover the core create/read (or equivalent) path end-to-end"
-echo "  - a simpler version of a hard feature is OK; skipping the test is not"
-exit 1
+cd "${QUESTION_DIR}"
+export CHAT_PG_URL="${CHAT_PG_URL:-http://localhost:8000}"
+export CHAT_CS_URL="${CHAT_CS_URL:-http://localhost:8001}"
+
+echo "Functional tests against design 1 (${CHAT_PG_URL}) and design 2 (${CHAT_CS_URL})"
+python -m pytest tests/test_functional.py -v

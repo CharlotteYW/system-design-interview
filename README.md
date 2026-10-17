@@ -77,7 +77,7 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | 4 | Key-value store / distributed cache | [questions/key-value-store](questions/key-value-store/) | Hello Interview · Alex Xu Vol 1 Ch 6 · **Implemented** |
 | 5 | Notification system | [questions/notification-system](questions/notification-system/) | Hello Interview · Alex Xu Vol 1 Ch 10 · **Implemented** |
 | 6 | News feed | [questions/news-feed](questions/news-feed/) | Hello Interview (FB News Feed) · Alex Xu Vol 1 Ch 11 · **Implemented** |
-| 7 | Chat system (WhatsApp) | [questions/chat-system](questions/chat-system/) | Hello Interview · Alex Xu Vol 1 Ch 12 |
+| 7 | Chat system (WhatsApp) | [questions/chat-system](questions/chat-system/) | Hello Interview · Alex Xu Vol 1 Ch 12 · **Implemented** |
 | 8 | YouTube | [questions/youtube](questions/youtube/) | Hello Interview · Alex Xu Vol 1 Ch 14 |
 | 9 | Web crawler | [questions/web-crawler](questions/web-crawler/) | Hello Interview · Alex Xu Vol 1 Ch 9 |
 | 10 | Uber / ride matching | [questions/uber](questions/uber/) | Hello Interview · related: Alex Xu Vol 2 Proximity Service |
@@ -109,7 +109,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | FB News Feed | Medium | [Implemented](questions/news-feed/) | |
 | Tinder | Medium | listed | |
 | LeetCode | Medium | listed | |
-| WhatsApp | Medium | [Stub](questions/chat-system/) | |
+| WhatsApp | Medium | [Implemented](questions/chat-system/) | Two logical servers A/B; Redis Pub/Sub hop; Postgres vs Cassandra message store side by side; load test |
 | Strava | Medium | listed | |
 | Distributed Cache | Medium | [Implemented](questions/key-value-store/) | |
 | Rate Limiter | Medium | [Implemented](questions/rate-limiter/) | |
@@ -149,7 +149,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 9 | Web crawler | [Stub](questions/web-crawler/) |
 | 10 | Notification system | [Implemented](questions/notification-system/) |
 | 11 | News feed | [Implemented](questions/news-feed/) |
-| 12 | Chat system | [Stub](questions/chat-system/) |
+| 12 | Chat system | [Implemented](questions/chat-system/) |
 | 13 | Search autocomplete | listed |
 | 14 | YouTube | [Stub](questions/youtube/) |
 | 15 | Google Drive | listed |

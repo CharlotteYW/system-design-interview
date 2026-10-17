@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chat system — compare two message stores</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: #1c1917;
+      background: #f5f5f4;
+    }
+    header { padding: 14px 20px 6px; }
+    h1 { margin: 0; font-family: "IBM Plex Serif", Georgia, serif; font-size: 1.4rem; }
+    .note { color: #57534e; font-size: 0.88rem; max-width: 80rem; }
+    table { border-collapse: collapse; font-size: 0.8rem; margin: 6px 20px 10px; background: #fff; }
+    th, td { border: 1px solid #d6d3d1; padding: 4px 8px; text-align: left; vertical-align: top; }
+    th { background: #fafaf9; }
+    .pg { color: #1d4ed8; font-weight: 600; }
+    .cs { color: #7e22ce; font-weight: 600; }
+    .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 8px 8px; }
+    .pane h2 { margin: 4px 6px; font-size: 0.95rem; }
+    iframe { width: 100%; height: 2400px; border: 1px solid #d6d3d1; background: #fff; }
+    ol { margin: 4px 0 8px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Same chat, two message stores</h1>
+    <p class="note">
+      The left pane is design 1: <code>messages</code> and <code>device_cursors</code> in Postgres.
+      The right pane is design 2: the same two tables in Cassandra. The roster, Redis Pub/Sub,
+      and the chat servers are the same on both sides. Each side has its own data.
+    </p>
+    <ol class="note">
+      <li>Click <b>Online cross server</b> on both sides.</li>
+      <li>Send 6 messages to <code>lee-kim</code> on both sides. The right partition card grows a second bucket.</li>
+      <li>Select <code>kim-phone</code> in the mailbox, then click <b>Ack all</b>.</li>
+      <li>Click <b>Late ack</b>. The left cursor stays put. On the right, the upsert moves it back and the LWT keeps it.</li>
+      <li>Disconnect <code>kim-phone</code>, send, then connect. Compare the <code>reads</code> in each connect response.</li>
+    </ol>
+  </header>
+
+  <table>
+    <tr><th></th><th class="pg">Design 1: Postgres</th><th class="cs">Design 2: Cassandra</th></tr>
+    <tr><td>messages key</td><td><code>id</code>, <code>UNIQUE (chat_id, seq)</code></td><td><code>((chat_id, bucket), seq)</code></td></tr>
+    <tr><td>drain read</td><td>One index range, <code>seq &gt; last_seq</code></td><td>One range read per bucket from <code>last_seq + 1</code></td></tr>
+    <tr><td>late ack</td><td><code>GREATEST</code> ignores it</td><td>Upsert moves the cursor back. LWT keeps it, at the cost of Paxos</td></tr>
+    <tr><td>message + cursor</td><td>Can share one transaction</td><td>Two writes. At least once covers the gap</td></tr>
+    <tr><td>30-day retention</td><td>Batch delete or drop partitions</td><td>A TTL on each row</td></tr>
+    <tr><td>scale out</td><td>You build shard routing by <code>chat_id</code></td><td>Add nodes. The token ring moves partitions</td></tr>
+  </table>
+
+  <div class="panes">
+    <div class="pane">
+      <h2 class="pg">Design 1 — Postgres (:8000)</h2>
+      <iframe id="pgFrame" title="Design 1"></iframe>
+    </div>
+    <div class="pane">
+      <h2 class="cs">Design 2 — Cassandra (:8001)</h2>
+      <iframe id="csFrame" title="Design 2"></iframe>
+    </div>
+  </div>
+
+  <script>
+    const host = location.protocol + "//" + location.hostname;
+    document.getElementById("pgFrame").src = host + ":8000/";
+    document.getElementById("csFrame").src = host + ":8001/";
+  </script>
+</body>
+</html>

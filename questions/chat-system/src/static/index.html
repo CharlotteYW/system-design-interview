@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chat system</title>
+  <style>
+    :root {
+      --ink: #1c1917;
+      --muted: #57534e;
+      --line: #d6d3d1;
+      --paper: #faf7f2;
+      --card: #fff;
+      --accent: #0f766e;
+      --pg: #1d4ed8;
+      --redis: #b91c1c;
+      --server: #0f766e;
+      --cs: #7e22ce;
+      --flash: #fef08a;
+    }
+    .tag.cassandra { color: var(--cs); }
+    .design-hidden { display: none !important; }
+    .design-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      margin-left: 10px;
+      font-size: 0.8rem;
+      color: #fff;
+      vertical-align: middle;
+      background: var(--pg);
+    }
+    .design-badge.cassandra { background: var(--cs); }
+    nav.designs { margin-top: 8px; font-size: 0.85rem; }
+    nav.designs a { margin-right: 14px; color: var(--accent); }
+    @media (max-width: 1100px) {
+      .actions, .stores { grid-template-columns: 1fr 1fr !important; }
+    }
+    @media (max-width: 760px) {
+      .actions, .stores { grid-template-columns: 1fr !important; }
+    }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, #ccfbf1 0, transparent 40%),
+        linear-gradient(180deg, #f5f5f4, var(--paper));
+    }
+    header { padding: 20px 24px 8px; }
+    h1 { margin: 0; font-family: "IBM Plex Serif", Georgia, serif; font-size: 1.7rem; }
+    .note { color: var(--muted); max-width: 70rem; font-size: 0.9rem; }
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 12px 24px;
+    }
+    .stores {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      padding: 0 24px 24px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 12px;
+      min-height: 7rem;
+    }
+    .card.flash {
+      box-shadow: inset 0 0 0 2px var(--flash);
+      background: #fffbeb;
+      transition: background 0.8s ease, box-shadow 0.8s ease;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      margin-bottom: 6px;
+      border: 1px solid currentColor;
+    }
+    .tag.server { color: var(--server); }
+    .tag.postgres { color: var(--pg); }
+    .tag.redis { color: var(--redis); }
+    .tag.client { color: #7c2d12; }
+    h2 { margin: 0 0 6px; font-size: 1rem; }
+    h3 { margin: 10px 0 4px; font-size: 0.85rem; color: var(--muted); }
+    label { display: block; font-size: 0.8rem; margin-top: 6px; color: var(--muted); }
+    input, select, button { font: inherit; }
+    input, select { width: 100%; box-sizing: border-box; padding: 6px; }
+    button {
+      margin-top: 8px;
+      margin-right: 6px;
+      background: var(--accent);
+      color: #fff;
+      border: 0;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    button.secondary { background: #44403c; }
+    pre {
+      background: #1c1917;
+      color: #fafaf9;
+      padding: 8px;
+      overflow: auto;
+      font-size: 0.72rem;
+      min-height: 4rem;
+      max-height: 14rem;
+      margin: 0;
+    }
+    .scroll {
+      max-height: 14rem;
+      overflow: auto;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 3px 4px; vertical-align: top; }
+    .section-title {
+      grid-column: 1 / -1;
+      margin: 8px 0 0;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+    .glossary {
+      margin: 8px 24px 0;
+      padding: 16px 0 40px;
+      border-top: 2px solid var(--line);
+      max-width: 70rem;
+    }
+    .glossary h2 {
+      font-size: 1.15rem;
+      margin-bottom: 8px;
+    }
+    .glossary article {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 12px 14px;
+      margin: 10px 0;
+    }
+    .glossary h3 {
+      margin: 0 0 6px;
+      font-size: 0.95rem;
+      color: var(--ink);
+    }
+    .glossary dl {
+      margin: 0;
+      display: grid;
+      grid-template-columns: minmax(9rem, 12rem) 1fr;
+      gap: 6px 12px;
+      font-size: 0.82rem;
+    }
+    .glossary dt {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      color: var(--pg);
+    }
+    .glossary article.redis-gloss dt { color: var(--redis); }
+    .glossary article.server-gloss dt { color: var(--server); }
+    .glossary article.cs-gloss dt { color: var(--cs); }
+    .glossary dd { margin: 0; color: var(--ink); line-height: 1.35; }
+    .glossary .when {
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Chat system <span class="design-badge" id="designBadge">loading</span></h1>
+    <nav class="designs">
+      <a id="linkPg" href="#">Design 1: messages in Postgres (:8000)</a>
+      <a id="linkCs" href="#">Design 2: messages in Cassandra (:8001)</a>
+      <a id="linkCompare" href="#">Compare side by side</a>
+    </nav>
+    <p class="note">
+      Each store is its own component below. A yellow flash means that component just changed.
+      <span id="designNote">Interview default: Postgres store, Redis Pub/Sub live hop, drain on connect.</span>
+    </p>
+  </header>
+
+  <div class="actions">
+    <section class="card">
+      <span class="tag client">Actions</span>
+      <h2>Connect a device</h2>
+      <label>Client
+        <select id="connClient">
+          <option>lee-phone</option>
+          <option>lee-laptop</option>
+          <option selected>kim-phone</option>
+          <option>kim-laptop</option>
+          <option>ada-phone</option>
+        </select>
+      </label>
+      <label>Chat server
+        <select id="connServer">
+          <option>A</option>
+          <option selected>B</option>
+        </select>
+      </label>
+      <button id="btnConnect">POST /v1/lab/connect</button>
+      <button class="secondary" id="btnDisconnect">POST /v1/lab/disconnect</button>
+      <pre id="connTrace">Request and response appear here.</pre>
+    </section>
+
+    <section class="card">
+      <span class="tag client">Actions</span>
+      <h2>Start a chat</h2>
+      <p class="note">
+        The creator is added for you. Two people get a fixed id such as
+        <code>ada-kim</code>, so a second click returns the same chat.
+        Three or more get a new group id.
+      </p>
+      <label>Creator client
+        <select id="chatCreator">
+          <option>lee-phone</option>
+          <option>kim-phone</option>
+          <option selected>ada-phone</option>
+        </select>
+      </label>
+      <label>With
+        <span style="display:block">
+          <input type="checkbox" class="chatWith" value="lee" style="width:auto" /> lee
+          <input type="checkbox" class="chatWith" value="kim" style="width:auto" checked /> kim
+          <input type="checkbox" class="chatWith" value="ada" style="width:auto" /> ada
+        </span>
+      </label>
+      <label>Name (optional) <input id="chatName" value="" placeholder="Ada and Kim" /></label>
+      <button id="btnCreateChat">POST /v1/chats</button>
+      <pre id="chatTrace">Request and response appear here.</pre>
+    </section>
+
+    <section class="card">
+      <span class="tag client">Actions</span>
+      <h2>Send a message</h2>
+      <label>Sender client
+        <select id="sendClient">
+          <option selected>lee-phone</option>
+          <option>lee-laptop</option>
+          <option>kim-phone</option>
+          <option>kim-laptop</option>
+          <option>ada-phone</option>
+        </select>
+      </label>
+      <label>Sender server
+        <select id="sendServer">
+          <option selected>A</option>
+          <option>B</option>
+        </select>
+      </label>
+      <label>Chat (the sender must be a member, or the send gets 403)
+        <select id="sendChat">
+          <option value="lee-kim">lee-kim</option>
+          <option value="trip">trip</option>
+        </select>
+      </label>
+      <label>Body <input id="sendBody" value="hi" /></label>
+      <label>Media key <input id="sendMedia" value="" placeholder="media/demo.jpg" /></label>
+      <button id="btnSend">POST /v1/messages</button>
+      <pre id="sendTrace">Request and response appear here.</pre>
+    </section>
+
+    <section class="card">
+      <span class="tag client">Actions</span>
+      <h2>Scenario shortcuts</h2>
+      <button id="btnSame">Online same server</button>
+      <button id="btnCross">Online cross server</button>
+      <button id="btnOffline">Offline then drain</button>
+      <button class="secondary" id="btnReset">POST /v1/lab/reset</button>
+      <pre id="sceneTrace">Pick a scenario. Reset clears messages, cursors, and sockets.</pre>
+      <h3>Mailbox for one device</h3>
+      <label>Client
+        <select id="mailClient">
+          <option>lee-phone</option>
+          <option>lee-laptop</option>
+          <option selected>kim-phone</option>
+          <option>kim-laptop</option>
+          <option>ada-phone</option>
+        </select>
+      </label>
+      <label data-design="cassandra">Ack mode (Cassandra)
+        <select id="ackMode">
+          <option value="upsert" selected>upsert — last write wins (default)</option>
+          <option value="lwt">lwt — IF last_seq &lt; ? (Paxos)</option>
+        </select>
+      </label>
+      <button id="btnAckAll">Ack all (move cursors)</button>
+      <button class="secondary" id="btnLateAck">Late ack (seq − 2)</button>
+      <pre id="ackTrace">Ack shows cursor before and after.</pre>
+      <pre id="mailbox">[]</pre>
+    </section>
+  </div>
+
+  <div class="stores">
+    <p class="section-title">Chat servers (local in-memory maps — not in Postgres)</p>
+
+    <section class="card" data-watch="onlineA">
+      <span class="tag server">Chat server A</span>
+      <h2>Local connection map</h2>
+      <p class="note">
+        In-memory only on process A: <code>clientId → { userId, socket }</code>.
+        Also the reverse lookup <code>userId → [clientIds]</code> used to push.
+        Redis does not hold the socket.
+      </p>
+      <pre id="onlineA">{"clientToSocket": {}, "userToClients": {}}</pre>
+    </section>
+
+    <section class="card" data-watch="onlineB">
+      <span class="tag server">Chat server B</span>
+      <h2>Local connection map</h2>
+      <p class="note">
+        Same map shape on process B. Cross-server: Kim lands here; A never sees Kim's socket.
+      </p>
+      <pre id="onlineB">{"clientToSocket": {}, "userToClients": {}}</pre>
+    </section>
+
+    <section class="card" data-watch="mailbox">
+      <span class="tag client">Device mailbox</span>
+      <h2>Received on selected client</h2>
+      <p class="note">
+        This is where Kim <em>sees</em> the message while online
+        (<code>via: user-channel</code>). Offline reconnect uses
+        <code>via: drain</code>. Seeing ≠ cursor moved.
+      </p>
+      <pre id="mailboxPanel">[]</pre>
+    </section>
+
+    <p class="section-title" data-design="cassandra">
+      Cassandra (messages and cursors moved here — roster stays in Postgres below)
+    </p>
+
+    <section class="card" data-watch="csPartitions" data-design="cassandra">
+      <span class="tag cassandra">Cassandra</span>
+      <h2>messages_by_chat, grouped by partition</h2>
+      <p class="note">
+        <strong>A view, not a second table.</strong> The page groups the rows of
+        <code>messages_by_chat</code> by partition key <code>(chat_id, bucket)</code>.
+        Cassandra stores each partition together on one node (and its replicas),
+        sorted by <code>seq</code>. The token is the hash that picks the node.
+        <code>bucket = seq / <span id="bucketSize">5</span></code> in this lab, so seq 5 starts a new partition.
+      </p>
+      <div class="scroll" id="csPartitionsBox"></div>
+    </section>
+
+    <section class="card" data-watch="csMessages" data-design="cassandra">
+      <span class="tag cassandra">Cassandra</span>
+      <h2>messages_by_chat (the table, row by row)</h2>
+      <p class="note">
+        <code>PRIMARY KEY ((chat_id, bucket), seq)</code>. Rows sorted by <code>seq</code>
+        inside each partition. <code>ttl_seconds</code> counts down from 30 days.
+        <code>writetime</code> is the timestamp last write wins uses.
+      </p>
+      <div class="scroll" id="csMessagesBox"></div>
+    </section>
+
+    <section class="card" data-watch="csCursors" data-design="cassandra">
+      <span class="tag cassandra">Cassandra</span>
+      <h2>device_cursors_by_client</h2>
+      <p class="note">
+        <code>PRIMARY KEY ((client_id), chat_id)</code>. Plain upsert: a late ack
+        moves the cursor <em>back</em>. Try "Late ack" with each ack mode.
+      </p>
+      <div class="scroll" id="csCursorsBox"></div>
+    </section>
+
+    <p class="section-title">Postgres (one card per table)</p>
+
+    <section class="card" data-watch="messages" data-design="postgres">
+      <span class="tag postgres">Postgres</span>
+      <h2>messages</h2>
+      <p class="note">Changes on every send.</p>
+      <div class="scroll" id="messagesBox"></div>
+    </section>
+
+    <section class="card" data-watch="cursors" data-design="postgres">
+      <span class="tag postgres">Postgres</span>
+      <h2>device_cursors</h2>
+      <p class="note">
+        Sender cursor moves on send. Recipient cursor moves only on
+        <code>POST /v1/ack</code> (use Ack all). Online push fills the mailbox;
+        it does not move Kim's cursor. <code>GREATEST(old, new)</code> ignores a late ack.
+      </p>
+      <div class="scroll" id="cursorsBox"></div>
+    </section>
+
+    <section class="card" data-watch="clients">
+      <span class="tag postgres">Postgres</span>
+      <h2>clients</h2>
+      <div class="scroll" id="clientsBox"></div>
+    </section>
+
+    <section class="card" data-watch="lastSeen">
+      <span class="tag postgres">Postgres</span>
+      <h2>last_seen</h2>
+      <p class="note">Writes when the last device for a user disconnects.</p>
+      <div class="scroll" id="lastSeenBox"></div>
+    </section>
+
+    <section class="card" data-watch="chats">
+      <span class="tag postgres">Postgres</span>
+      <h2>chats</h2>
+      <div class="scroll" id="chatsBox"></div>
+    </section>
+
+    <section class="card" data-watch="members">
+      <span class="tag postgres">Postgres</span>
+      <h2>chat_members</h2>
+      <div class="scroll" id="membersBox"></div>
+    </section>
+
+    <p class="section-title">Redis (Pub/Sub live bus)</p>
+
+    <section class="card" data-watch="subs">
+      <span class="tag redis">Redis</span>
+      <h2>subscriptions</h2>
+      <p class="note">Which <code>user:*</code> channels A and B listen to.</p>
+      <pre id="subsBox">{}</pre>
+    </section>
+
+    <section class="card" data-watch="presence">
+      <span class="tag redis">Redis</span>
+      <h2>presence map</h2>
+      <p class="note"><code>user:kim:server -&gt; B</code>. Optional helper, not the live bus.</p>
+      <pre id="presenceBox">{}</pre>
+    </section>
+
+    <section class="card" data-watch="seq">
+      <span class="tag redis">Redis</span>
+      <h2>chat seq counters</h2>
+      <p class="note"><code>INCR chat:lee-kim:seq</code> on each send.</p>
+      <pre id="seqBox">{}</pre>
+    </section>
+
+    <section class="card" data-watch="pubsub" style="grid-column: 1 / -1;">
+      <span class="tag redis">Redis</span>
+      <h2>Pub/Sub log</h2>
+      <p class="note">SUBSCRIBE on connect. PUBLISH on send. RECEIVE on the server that holds the recipient.</p>
+      <pre id="pubsubBox">[]</pre>
+    </section>
+  </div>
+
+  <div class="glossary">
+    <h2>Store reference — what each piece is for</h2>
+    <p class="note">
+      Durable truth lives in Postgres. Live hops and counters use Redis.
+      Open sockets stay in each chat server process. Scroll up to watch them change.
+    </p>
+
+    <article>
+      <h3><span class="tag postgres">Postgres</span> Durable tables</h3>
+      <dl>
+        <dt>users</dt>
+        <dd>
+          Who can chat. Primary key <code>id</code> (lee, kim, ada).
+          Seeded once. Rarely changes in this lab.
+        </dd>
+        <dt>chats</dt>
+        <dd>
+          One row per conversation. Holds <code>id</code>, display <code>name</code>,
+          and <code>created_at</code>. Example ids: <code>lee-kim</code>, <code>trip</code>.
+        </dd>
+        <dt>chat_members</dt>
+        <dd>
+          Who belongs to which chat. Key <code>(chat_id, user_id)</code>.
+          Send and fan-out read this list to know every recipient user.
+        </dd>
+        <dt>clients</dt>
+        <dd>
+          Devices for a user (lee-phone, kim-laptop). Key <code>id</code>.
+          Connect and ack name a <code>clientId</code>, not only a user.
+          Multi-device needs this split.
+        </dd>
+        <dt>messages</dt>
+        <dd>
+          Source of truth for every message. Columns include
+          <code>chat_id</code>, per-chat <code>seq</code>, <code>sender_id</code>,
+          <code>body</code>, optional <code>media_key</code>.
+          Unique on <code>(chat_id, seq)</code>. Offline drain reads from here.
+        </dd>
+        <dt>device_cursors</dt>
+        <dd>
+          How far each device has confirmed in each chat.
+          Key <code>(client_id, chat_id)</code>, value <code>last_seq</code>.
+          Sender advances on send. Recipient advances only on ack.
+          Drain sends rows with <code>seq &gt; last_seq</code>.
+        </dd>
+        <dt>last_seen</dt>
+        <dd>
+          When the user went fully offline (no device left connected).
+          Key <code>user_id</code>. Optional for "last seen" UI. Not used for delivery.
+        </dd>
+      </dl>
+      <p class="when">
+        Survivable crash: messages and cursors stay. Redis Pub/Sub events do not.
+      </p>
+    </article>
+
+    <article class="redis-gloss">
+      <h3><span class="tag redis">Redis</span> Live bus and helpers</h3>
+      <dl>
+        <dt>Pub/Sub channel user:&#123;id&#125;</dt>
+        <dd>
+          Live hop to one user. On send, publish the new message here.
+          Every chat server that has that user online is subscribed.
+          That server writes into its local mailbox / socket.
+          Ephemeral: if no subscriber is listening, the publish is gone.
+        </dd>
+        <dt>Pub/Sub channel chat:&#123;id&#125;</dt>
+        <dd>
+          Optional group fan-out path for large chats (hot-chat variant).
+          Same idea as user channels, keyed by chat instead of user.
+        </dd>
+        <dt>subscriptions (A / B)</dt>
+        <dd>
+          Which channels each logical server currently listens to.
+          Grows when you connect a device. Shrinks when that server has
+          no local device left for that user.
+        </dd>
+        <dt>user:&#123;id&#125;:server</dt>
+        <dd>
+          Presence helper string: which server last claimed this user
+          (example <code>user:kim:server → B</code>).
+          Not the socket. Helps ops and demos. Delivery still uses Pub/Sub
+          plus the local connection map.
+        </dd>
+        <dt>chat:&#123;id&#125;:seq</dt>
+        <dd>
+          Atomic counter via <code>INCR</code>. Assigns the next
+          <code>seq</code> for that chat before the Postgres insert.
+          Keeps sequence numbers unique under concurrent sends.
+        </dd>
+        <dt>Pub/Sub log</dt>
+        <dd>
+          Lab-only history of SUBSCRIBE, PUBLISH, and RECEIVE.
+          Production Redis does not keep this log for you.
+        </dd>
+      </dl>
+      <p class="when">
+        Redis wins for speed and fan-out. Postgres wins for "Kim was offline;
+        give her everything after last_seq."
+      </p>
+    </article>
+
+    <article class="server-gloss">
+      <h3><span class="tag server">Chat servers A / B</span> Process-local (not a table)</h3>
+      <dl>
+        <dt>clientToSocket</dt>
+        <dd>
+          In-memory map on that process only:
+          <code>clientId → &#123; userId, socket &#125;</code>.
+          Redis never stores the socket. Cross-server Kim lives only on B's map.
+        </dd>
+        <dt>userToClients</dt>
+        <dd>
+          Reverse lookup on that same process:
+          <code>userId → [clientIds]</code>.
+          Used when a Pub/Sub event arrives and the server must push to
+          every local device for that user.
+        </dd>
+        <dt>device mailbox</dt>
+        <dd>
+          Lab stand-in for "bytes on the wire to the phone."
+          Shows <code>via: user-channel</code> (online) or
+          <code>via: drain</code> (catch-up after reconnect).
+          Seeing a row here is not the same as moving the cursor.
+        </dd>
+      </dl>
+      <p class="when">
+        Try: Lee on A, Kim on B, send once. Watch messages (Postgres),
+        Pub/Sub RECEIVE on B, Kim mailbox, then Ack all to move Kim's cursor.
+      </p>
+    </article>
+
+    <article class="cs-gloss">
+      <h3><span class="tag cassandra">Cassandra</span> Design 2 tables</h3>
+      <dl>
+        <dt>messages_by_chat</dt>
+        <dd>
+          Same facts as the Postgres <code>messages</code> row. Key
+          <code>((chat_id, bucket), seq)</code>. The partition key
+          <code>(chat_id, bucket)</code> picks the node through its token.
+          The clustering key <code>seq</code> sorts rows on disk inside that partition.
+          Table option <code>default_time_to_live = 2592000</code> expires rows after 30 days.
+        </dd>
+        <dt>bucket</dt>
+        <dd>
+          <code>seq / 5</code> in this lab. It stops one old chat from growing one partition
+          forever. Drain reads each bucket from <code>last_seq + 1</code> up to the current seq.
+          Discord buckets by about 10 days of time instead.
+        </dd>
+        <dt>device_cursors_by_client</dt>
+        <dd>
+          Key <code>((client_id), chat_id)</code>. One partition per device. Drain reads it
+          by device. A plain <code>UPDATE</code> is an upsert with no read. The last write wins,
+          so a late ack can move the cursor back. The device then gets a duplicate, and
+          the client drops it by message id.
+        </dd>
+        <dt>LWT</dt>
+        <dd>
+          A lightweight transaction: <code>UPDATE ... IF last_seq &lt; ?</code>. It runs Paxos,
+          which takes four round trips instead of one. It keeps the cursor moving forward.
+          It costs latency on every ack.
+        </dd>
+        <dt>Not in Cassandra</dt>
+        <dd>
+          <code>seq</code> still comes from Redis <code>INCR</code>. Cassandra has no safe per-chat
+          counter for this. The roster tables stay in Postgres. They change rarely, and
+          create-chat needs one transaction.
+        </dd>
+      </dl>
+      <p class="when">
+        Try: send 6 messages to lee-kim. Watch the partition card get a second row,
+        <code>(lee-kim, 1)</code>. Then disconnect Kim, send, and connect. The connect
+        response lists each partition the drain read.
+      </p>
+    </article>
+
+    <article>
+      <h3>Design 1 vs Design 2 — the same chat, two message stores</h3>
+      <dl>
+        <dt>messages key</dt>
+        <dd>Postgres: <code>id</code> plus <code>UNIQUE (chat_id, seq)</code>.
+          Cassandra: <code>((chat_id, bucket), seq)</code>.</dd>
+        <dt>send write</dt>
+        <dd>Postgres: one insert on the primary. Cassandra: one append to the partition, with no read first.</dd>
+        <dt>drain read</dt>
+        <dd>Postgres: one index range, <code>seq &gt; last_seq</code>.
+          Cassandra: one range read per bucket from <code>last_seq + 1</code> up to the current seq.</dd>
+        <dt>cursor update</dt>
+        <dd>Postgres: <code>GREATEST(old, new)</code>, so a late ack is ignored.
+          Cassandra: an upsert, so a late ack moves the cursor back. Use an LWT to stop that.</dd>
+        <dt>transaction</dt>
+        <dd>Postgres: the message and the cursor can share one transaction.
+          Cassandra: two separate writes. At least once covers a crash between them.</dd>
+        <dt>30-day retention</dt>
+        <dd>Postgres: a batch delete, or dropping daily partitions.
+          Cassandra: a TTL on each row, then compaction removes it.</dd>
+        <dt>scale out</dt>
+        <dd>Postgres: you build shard routing by <code>chat_id</code>.
+          Cassandra: add nodes, and the token ring moves the partitions.</dd>
+        <dt>when it wins</dt>
+        <dd>Postgres: up to about a few thousand writes per second, or a team that runs MySQL or Postgres well.
+          Cassandra: about 40,000 messages per second, append-only writes, reads by key.</dd>
+      </dl>
+    </article>
+
+    <article>
+      <h3>When tables grow — split or leave alone</h3>
+      <p class="note">
+        Interview default at the Hello Interview scale: move <code>messages</code> to
+        Cassandra, keyed by <code>chat_id</code> plus a bucket (design 2). Most other
+        tables stay one piece until a measured pain appears.
+      </p>
+      <dl>
+        <dt>messages</dt>
+        <dd>
+          <strong>Split first.</strong> At about 100,000 writes per second, move to a
+          wide-column store such as Cassandra. Key <code>((chat_id, bucket), seq)</code>:
+          one chat stays together, a time bucket bounds the partition, and
+          <code>seq</code> sorts rows for the drain range read. A TTL drops rows after 30 days.
+          Sharded Postgres by <code>chat_id</code> is the other valid path. Do not
+          shard by <code>sender_id</code>. Then drain must read from every shard.
+        </dd>
+        <dt>device_cursors</dt>
+        <dd>
+          <strong>Split with the device or the chat.</strong> Often co-locate
+          with messages by <code>chat_id</code>, or shard by
+          <code>client_id</code> / <code>user_id</code>. Key stays
+          <code>(client_id, chat_id)</code>. Grows with devices × chats, not
+          with every message.
+        </dd>
+        <dt>chat_members</dt>
+        <dd>
+          <strong>Split only if huge.</strong> Prefer shard by
+          <code>chat_id</code> (same as messages) so "who is in this chat"
+          is one lookup on send. Secondary index or cache for
+          "all chats for user" if that query is hot.
+        </dd>
+        <dt>chats</dt>
+        <dd>
+          <strong>Usually no split.</strong> One row per conversation.
+          Millions of chats still fit one primary for a long time.
+          Shard by <code>chat_id</code> only if chat metadata itself is huge.
+        </dd>
+        <dt>clients</dt>
+        <dd>
+          <strong>Usually no split.</strong> A few devices per user.
+          Shard by <code>user_id</code> only at very large account counts.
+        </dd>
+        <dt>users</dt>
+        <dd>
+          <strong>Usually no split</strong> in the chat service, or shard by
+          <code>user_id</code> in a shared account store. Not on the hot
+          send path beyond a membership check.
+        </dd>
+        <dt>last_seen</dt>
+        <dd>
+          <strong>No split needed for delivery.</strong> One row per user.
+          Can live in Redis or a small table. Optional display only.
+        </dd>
+        <dt>Redis Pub/Sub</dt>
+        <dd>
+          <strong>Shard the cluster by channel name</strong>
+          (<code>user:{id}</code>), not by storing message history.
+          Presence keys <code>user:{id}:server</code> and seq keys
+          <code>chat:{id}:seq</code> follow the same hash. Seq must stay
+          with that chat's message shard logically (same chat id).
+        </dd>
+        <dt>Local socket maps</dt>
+        <dd>
+          <strong>Scale out chat servers</strong> (more A/B processes).
+          Each process keeps only its own sockets. Not a database partition.
+        </dd>
+      </dl>
+      <p class="when">
+        Rule of thumb: partition on the key your hottest query already uses.
+        For chat history that key is <code>chat_id</code>.
+      </p>
+    </article>
+  </div>
+
+  <script>
+    const snapshots = {};
+
+    function show(id, method, path, body, response) {
+      document.getElementById(id).textContent =
+        method + " " + path + " -> " + response.status + "\n"
+        + "Body: " + JSON.stringify(body, null, 2) + "\n"
+        + "Response: " + JSON.stringify(response.body, null, 2);
+    }
+
+    async function callApi(traceId, method, path, body) {
+      const response = await fetch(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+      const payload = await response.json();
+      if (traceId) show(traceId, method, path, body || {}, { status: response.status, body: payload });
+      return payload;
+    }
+
+    function tableHtml(rows) {
+      if (!rows || !rows.length) return "<p class='note'>empty</p>";
+      const keys = Object.keys(rows[0]);
+      let html = "<table><thead><tr>" + keys.map((k) => "<th>" + k + "</th>").join("") + "</tr></thead><tbody>";
+      for (const row of rows) {
+        html += "<tr>" + keys.map((k) => "<td>" + String(row[k] ?? "") + "</td>").join("") + "</tr>";
+      }
+      return html + "</tbody></table>";
+    }
+
+    function flashIfChanged(key, value) {
+      const encoded = JSON.stringify(value);
+      if (snapshots[key] === undefined) {
+        snapshots[key] = encoded;
+        return;
+      }
+      if (snapshots[key] === encoded) return;
+      snapshots[key] = encoded;
+      const card = document.querySelector('[data-watch="' + key + '"]');
+      if (!card) return;
+      card.classList.remove("flash");
+      void card.offsetWidth;
+      card.classList.add("flash");
+      setTimeout(() => card.classList.remove("flash"), 1200);
+    }
+
+    document.getElementById("btnConnect").onclick = () => callApi("connTrace", "POST", "/v1/lab/connect", {
+      serverId: document.getElementById("connServer").value,
+      clientId: document.getElementById("connClient").value,
+    }).then(refresh);
+
+    document.getElementById("btnDisconnect").onclick = () => callApi("connTrace", "POST", "/v1/lab/disconnect", {
+      clientId: document.getElementById("connClient").value,
+    }).then(refresh);
+
+    document.getElementById("btnSend").onclick = async () => {
+      await callApi("sendTrace", "POST", "/v1/messages", {
+        chatId: document.getElementById("sendChat").value,
+        message: document.getElementById("sendBody").value,
+        mediaKey: document.getElementById("sendMedia").value,
+        serverId: document.getElementById("sendServer").value,
+        clientId: document.getElementById("sendClient").value,
+      });
+      await refresh();
+    };
+
+    document.getElementById("btnCreateChat").onclick = async () => {
+      const participants = [...document.querySelectorAll(".chatWith:checked")].map((el) => el.value);
+      const body = {
+        participants,
+        name: document.getElementById("chatName").value,
+        clientId: document.getElementById("chatCreator").value,
+      };
+      const result = await callApi("chatTrace", "POST", "/v1/chats", body);
+      await refresh();
+      if (result.chatId) {
+        document.getElementById("sendChat").value = result.chatId;
+        document.getElementById("sendClient").value = body.clientId;
+      }
+    };
+
+    function renderChatOptions(state) {
+      const select = document.getElementById("sendChat");
+      const keep = select.value;
+      const members = {};
+      for (const row of state.postgres.chat_members) {
+        (members[row.chat_id] = members[row.chat_id] || []).push(row.user_id);
+      }
+      const html = state.postgres.chats
+        .map((c) => '<option value="' + c.id + '">' + c.id + " (" + (members[c.id] || []).join(", ") + ")</option>")
+        .join("");
+      if (select.dataset.html === html) return;
+      select.dataset.html = html;
+      select.innerHTML = html;
+      if ([...select.options].some((o) => o.value === keep)) select.value = keep;
+    }
+
+    document.getElementById("btnSame").onclick = async () => {
+      await callApi(null, "POST", "/v1/lab/connect", { serverId: "A", clientId: "lee-phone" });
+      await callApi(null, "POST", "/v1/lab/connect", { serverId: "A", clientId: "kim-phone" });
+      document.getElementById("sceneTrace").textContent =
+        "Lee and Kim both on A. Watch Chat server A, Redis subscriptions, then Send.";
+      document.getElementById("sendClient").value = "lee-phone";
+      document.getElementById("sendServer").value = "A";
+      document.getElementById("mailClient").value = "kim-phone";
+      await refresh();
+    };
+
+    document.getElementById("btnCross").onclick = async () => {
+      await callApi(null, "POST", "/v1/lab/connect", { serverId: "A", clientId: "lee-phone" });
+      await callApi(null, "POST", "/v1/lab/connect", { serverId: "B", clientId: "kim-phone" });
+      document.getElementById("sceneTrace").textContent =
+        "Lee on A, Kim on B. Send, then watch Redis Pub/Sub log RECEIVE on B and messages table.";
+      document.getElementById("sendClient").value = "lee-phone";
+      document.getElementById("sendServer").value = "A";
+      document.getElementById("mailClient").value = "kim-phone";
+      await refresh();
+    };
+
+    document.getElementById("btnOffline").onclick = async () => {
+      await callApi(null, "POST", "/v1/lab/connect", { serverId: "A", clientId: "lee-phone" });
+      await callApi(null, "POST", "/v1/lab/disconnect", { clientId: "kim-phone" });
+      document.getElementById("sceneTrace").textContent =
+        "Kim offline. Send, watch messages grow but Kim mailbox empty. Connect kim-phone to drain.";
+      document.getElementById("sendClient").value = "lee-phone";
+      document.getElementById("sendServer").value = "A";
+      document.getElementById("mailClient").value = "kim-phone";
+      document.getElementById("connClient").value = "kim-phone";
+      document.getElementById("connServer").value = "B";
+      await refresh();
+    };
+
+    document.getElementById("btnReset").onclick = async () => {
+      await callApi("sceneTrace", "POST", "/v1/lab/reset", {});
+      Object.keys(snapshots).forEach((k) => delete snapshots[k]);
+      await refresh();
+    };
+
+    let currentDesign = "postgres";
+    let lastState = null;
+
+    function ackBody(clientId, chatId, seq) {
+      const body = { clientId, chatId, seq };
+      if (currentDesign === "cassandra") body.mode = document.getElementById("ackMode").value;
+      return body;
+    }
+
+    document.getElementById("btnAckAll").onclick = async () => {
+      const clientId = document.getElementById("mailClient").value;
+      const mail = await (await fetch("/v1/lab/mailbox/" + clientId)).json();
+      let sent = 0;
+      for (const item of mail.items) {
+        if (item.type !== "newMessage") continue;
+        const message = item.message;
+        await callApi("ackTrace", "POST", "/v1/ack", ackBody(clientId, message.chat_id, message.seq));
+        sent += 1;
+      }
+      if (!sent) document.getElementById("ackTrace").textContent = "No newMessage in this mailbox to ack.";
+      await refresh();
+    };
+
+    function cursorRows(state) {
+      if (state.design === "cassandra") return state.cassandra.device_cursors_by_client;
+      return state.postgres.device_cursors;
+    }
+
+    document.getElementById("btnLateAck").onclick = async () => {
+      const clientId = document.getElementById("mailClient").value;
+      const chatId = document.getElementById("sendChat").value;
+      const state = lastState || (await (await fetch("/v1/lab/state")).json());
+      const row = (cursorRows(state) || []).find((r) => r.client_id === clientId && r.chat_id === chatId);
+      if (!row || row.last_seq < 3) {
+        document.getElementById("ackTrace").textContent =
+          "Need a cursor of 3 or more for " + clientId + " in " + chatId +
+          ". Send a few messages, then Ack all first.";
+        return;
+      }
+      await callApi("ackTrace", "POST", "/v1/ack", ackBody(clientId, chatId, row.last_seq - 2));
+      await refresh();
+    };
+
+    function applyDesign(design) {
+      currentDesign = design;
+      document.querySelectorAll("[data-design]").forEach((el) => {
+        el.classList.toggle("design-hidden", el.dataset.design !== design);
+      });
+      const badge = document.getElementById("designBadge");
+      badge.textContent = design === "cassandra" ? "Design 2: messages in Cassandra" : "Design 1: messages in Postgres";
+      badge.classList.toggle("cassandra", design === "cassandra");
+      document.title = "Chat system — " + badge.textContent;
+    }
+
+    const host = location.protocol + "//" + location.hostname;
+    document.getElementById("linkPg").href = host + ":8000/";
+    document.getElementById("linkCs").href = host + ":8001/";
+    document.getElementById("linkCompare").href = host + ":8000/compare";
+    if (window.self !== window.top) document.querySelector("nav.designs").style.display = "none";
+
+    async function refresh() {
+      const state = await (await fetch("/v1/lab/state")).json();
+      lastState = state;
+      if (state.design !== currentDesign || !document.getElementById("designBadge").dataset.set) {
+        applyDesign(state.design);
+        document.getElementById("designBadge").dataset.set = "1";
+      }
+      document.getElementById("designNote").textContent = "Interview default: " + state.interviewDefault + ".";
+      renderChatOptions(state);
+      const clientId = document.getElementById("mailClient").value;
+      const mail = await (await fetch("/v1/lab/mailbox/" + clientId)).json();
+
+      const mapA = {
+        clientToSocket: (state.connectionMaps && state.connectionMaps.A) || {},
+        userToClients: (state.userToClients && state.userToClients.A) || {},
+      };
+      const mapB = {
+        clientToSocket: (state.connectionMaps && state.connectionMaps.B) || {},
+        userToClients: (state.userToClients && state.userToClients.B) || {},
+      };
+      document.getElementById("onlineA").textContent = JSON.stringify(mapA, null, 2);
+      document.getElementById("onlineB").textContent = JSON.stringify(mapB, null, 2);
+      document.getElementById("mailbox").textContent = JSON.stringify(mail.items, null, 2);
+      document.getElementById("mailboxPanel").textContent = JSON.stringify(mail.items, null, 2);
+
+      if (state.design === "cassandra") {
+        const cs = state.cassandra;
+        document.getElementById("bucketSize").textContent = cs.bucketSize;
+        document.getElementById("csPartitionsBox").innerHTML = tableHtml(cs.partitions);
+        document.getElementById("csMessagesBox").innerHTML = tableHtml(cs.messages_by_chat);
+        document.getElementById("csCursorsBox").innerHTML = tableHtml(cs.device_cursors_by_client);
+        flashIfChanged("csPartitions", cs.partitions);
+        flashIfChanged("csMessages", cs.messages_by_chat.map((r) => [r.chat_id, r.seq]));
+        flashIfChanged("csCursors", cs.device_cursors_by_client);
+      } else {
+        document.getElementById("messagesBox").innerHTML = tableHtml(state.postgres.messages);
+        document.getElementById("cursorsBox").innerHTML = tableHtml(state.postgres.device_cursors);
+        flashIfChanged("messages", state.postgres.messages);
+        flashIfChanged("cursors", state.postgres.device_cursors);
+      }
+      document.getElementById("clientsBox").innerHTML = tableHtml(state.postgres.clients);
+      document.getElementById("lastSeenBox").innerHTML = tableHtml(state.postgres.last_seen);
+      document.getElementById("chatsBox").innerHTML = tableHtml(state.postgres.chats);
+      document.getElementById("membersBox").innerHTML = tableHtml(state.postgres.chat_members);
+
+      document.getElementById("subsBox").textContent = JSON.stringify(state.redis.subscriptions, null, 2);
+      document.getElementById("presenceBox").textContent = JSON.stringify(state.redis.presence, null, 2);
+      document.getElementById("seqBox").textContent = JSON.stringify(state.redis.chatSeq, null, 2);
+      document.getElementById("pubsubBox").textContent = JSON.stringify(state.redis.pubsubLog, null, 2);
+
+      flashIfChanged("onlineA", mapA);
+      flashIfChanged("onlineB", mapB);
+      flashIfChanged("mailbox", mail.items);
+      flashIfChanged("clients", state.postgres.clients);
+      flashIfChanged("lastSeen", state.postgres.last_seen);
+      flashIfChanged("chats", state.postgres.chats);
+      flashIfChanged("members", state.postgres.chat_members);
+      flashIfChanged("subs", state.redis.subscriptions);
+      flashIfChanged("presence", state.redis.presence);
+      flashIfChanged("seq", state.redis.chatSeq);
+      flashIfChanged("pubsub", state.redis.pubsubLog);
+    }
+
+    document.getElementById("mailClient").onchange = refresh;
+    refresh();
+    setInterval(refresh, 1000);
+  </script>
+</body>
+</html>
