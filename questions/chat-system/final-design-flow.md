@@ -44,11 +44,13 @@ Body: {
 ## Send a message
 
 ```
-sendMessage -> { messageId, status }
+sendMessage -> { messageId, status, seq, duplicate }
 Body: {
   chatId,
   message,
-  attachments
+  attachments,
+  clientMsgId, // UUID per message. A retry sends the same one and gets the first seq back
+  clientSeq    // this device's own counter in this chat. Detects a swap
 }
 ```
 

@@ -23,6 +23,11 @@ def test_page_shows_variants_and_stores(client: httpx.Client) -> None:
     assert "Design 1 vs Design 2" in text
     assert "POST /v1/chats" in text
     assert "A view, not a second table" in text
+    assert "Ack contiguous" in text
+    assert "Retry last send (same clientMsgId)" in text
+    assert "idempotency keys" in text
+    assert "Lose counter (guard off)" in text
+    assert "Crash server mid-send" in text
 
 
 def test_compare_page_embeds_both_designs(pg_client: httpx.Client) -> None:

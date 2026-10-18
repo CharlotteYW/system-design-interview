@@ -233,3 +233,202 @@ A FastAPI WebSocket belongs to the asyncio event loop. `send_json` is a coroutin
 - **Option D: One thread per socket.** Each thread needs about 1 MB of stack (a typical default), so 1 million sockets needs about 1 TB. This option does not scale.
 
 One server holds about 100,000 to 1 million sockets, and that is why chat servers use an event loop. The lab keeps Option B. Production would use Option C on an async runtime.
+
+**Q: What is `seq` for? Does the timestamp decide the order? If a later message reaches the server first, which one is first?** (2026-10-17)  
+A: The server's accept order decides it. The sequencer (Redis `INCR`) hands out `seq` as sends arrive. The first send it accepts is first, whatever the client clocks say. For two people this is the only fair answer. No device can see the real send times, so the promise is that every device shows the same order.
+
+`seq` gives the display order, the drain (`seq > last_seq`), gap detection (holding 7 and getting 9 means 8 is missing), and a unique key `(chat_id, seq)`. `created_at` is a label only. Clocks on two servers differ by milliseconds, two messages can share a millisecond, and a timestamp cannot show a gap. Hello Interview orders by the server receive time, and that is fine for display.
+
+For one sender, TCP keeps order on one socket. A swap needs a retry or a second device. The client sends from an ordered outbox with a client message id, so a retry returns the first `seq`.
+
+On the receive side, the client inserts by `seq` and acks only the highest contiguous seq. Otherwise `GREATEST` skips a missing message forever. The contiguous ack also covers the race where seq 6 commits before seq 5.
+
+Gaps in the lab: there is no client message id yet, and "Ack all" acks each item without a contiguity check. See the README section "Message ordering."
+
+**Q: Does a client local id keep the send order? How do servers with different clocks agree? Where is `seq` generated, and does the lab do it?** (2026-10-17)  
+A: A client id keeps one device's own order. Lee's phone can number its own sends 1, 2, 3, but Kim's phone has its own 1, 2, 3, and the two cannot be compared. The server must merge them into one order. A client message id (a UUID) is a different tool. It makes a retry return the first `seq`, and it does not order anything.
+
+Server clocks do not matter for the order. `seq` comes from Redis `INCR chat:{chat_id}:seq`, a single shared counter. Redis runs commands one at a time, so it never hands out the same number twice. The server then stores that number in the `seq` column in Postgres or Cassandra. The database stores the number, and Redis makes it. The clock only fills `created_at`, the time label. Ordering by server time instead (Hello Interview) lets a few milliseconds of skew swap two near-simultaneous messages, and NTP keeps that rare.
+
+The lab does generate `seq` this way: `next_seq` in `src/main.py` is called by `send_message` before the insert. A demo fired 20 sends at once through servers A and B and got seq 1 to 20, unique and with no holes. Lee's 10 parallel sends were stored as `#1, #4, #2, #7, ...`, which shows why a phone sends from an ordered outbox on one socket. The test `test_concurrent_sends_get_unique_contiguous_seq` now checks this on both designs.
+
+**Q: Which client fields go to the server, and why? If "a" is delayed, can "b" go first? What if the `seq` server dies?** (2026-10-17)  
+A: Both fields go in every send body.
+
+- `clientMsgId` is a UUID per message. A retry reuses it, so the server returns the first `seq` with `duplicate: true` and stores nothing new.
+- `clientSeq` is the device's own counter in that chat. The server cannot order one device's sends without it. The server keeps the highest `clientSeq` per device per chat and flags a lower late one `outOfOrder: true`. The server `seq` still decides the display.
+
+With one ordered socket, `clientSeq` is a detector. With parallel sends, it is the only way to see a swap.
+
+On one TCP connection, a lost packet holding "a" blocks "b" until TCP resends "a" (head-of-line blocking). So "a" cannot fall behind "b" on the wire. "b" goes first only when the app writes it first:
+
+- "a" is a photo still uploading.
+- The socket dropped and "a" is resent on a new one.
+- "b" came from another device.
+
+The server order then wins.
+
+The counter is one key on one Redis primary. A dead primary stops sends for its chats until a replica takes over in seconds, while other shards keep working. The risk is a replica that comes back with a low or missing counter, which hands out an old `seq`. Postgres catches that with `UNIQUE (chat_id, seq)` and returns 409. Cassandra overwrites the old row silently.
+
+The lab guard rebuilds a missing counter from the highest stored `seq`. Production also uses `WAIT`, a fencing epoch, or a counter that does not live in Redis (Option D or E).
+
+**Q: Short version. What do the two client fields prevent? When can two messages get the same `seq`, and what happens?** (2026-10-18)  
+A: `clientMsgId` prevents a duplicate message when a retry repeats a send. `clientSeq` detects one device's messages arriving in the wrong order.
+
+`seq` is per chat, so `lee-kim` seq 5 and `trip` seq 5 are both normal. The problem is two messages in the same chat with the same seq. `INCR` is atomic, so a healthy primary never repeats a number. A repeat needs the counter to go back, and that has four causes:
+
+- Failover to a replica that lagged.
+- Split brain: the old primary keeps writing after a replica is promoted.
+- A restart without persistence.
+- Eviction of the key under `maxmemory`.
+
+When it happens, Postgres rejects the second insert through `UNIQUE (chat_id, seq)`, and nothing is lost. Cassandra overwrites the first message: devices that already had it keep it, and others never see it.
+
+Prevent each cause:
+
+- A lagged failover: `WAIT`, a fencing epoch, or `IF NOT EXISTS`.
+- Split brain: `min-replicas-to-write`.
+- A restart: append-only file persistence.
+- Eviction: `noeviction` or a separate Redis for counters.
+
+Options D and E avoid Redis for order. `WAIT`, the epoch, and Options D and E prevent the repeat. `IF NOT EXISTS` and the Postgres `UNIQUE` detect it at write time.
+
+**Q: Where is the `clientMsgId` code, and are the fields stored? How does `WAIT` help? Can a lower `seq` have a later timestamp?** (2026-10-18)  
+A: The check is in `send_message` in `src/main.py`. `SET idem:{clientId}:{clientMsgId} pending NX EX 86400` claims the id. If the claim fails, `replay_idempotent` returns the saved first answer with `duplicate: true`. The Redis key does the dedupe. Both fields are also stored on the message row (Postgres columns, Cassandra columns) as a record, but no unique index uses them. A stronger option is a unique index on `(sender client, client_msg_id)` in Postgres.
+
+`WAIT 1 timeout` blocks until one replica has every earlier write from this connection. Without it:
+
+1. `INCR` returns 5.
+2. The message is stored.
+3. The primary dies before the replica gets 5.
+4. The promoted replica says 4, so the next send gets 5 again.
+
+With `WAIT 1 50` between `INCR` and the insert, the replica already holds 5, and Sentinel promotes the most up-to-date replica. It costs one replica round trip (under about 1 ms in one data center). Use a short timeout, not 0, which waits forever. If no replica answers, fail the send. `WAIT` narrows the window, but Redis still is not strongly consistent.
+
+With healthy Redis, two messages in one chat never share a `seq`. The chat's key lives on one primary, and `INCR` is atomic.
+
+A lower `seq` can carry a later `created_at`, because server clocks differ by milliseconds. The order is unaffected, because devices sort by `seq`. Only the label can look a few milliseconds off. To make them agree, take the time from Redis `TIME` in the same script as `INCR`, so one clock stamps every message in the chat. Or the client shows `max(previous time, created_at)`.
+
+**Q: What does a repeated `clientMsgId` return? Where is the `WAIT` code? Is my summary of the two fields right?** (2026-10-18)  
+A: A repeat returns the saved first answer. That answer holds the server `seq` the message got the first time, plus the same `messageId` and `clientSeq`, with `duplicate: true`.
+
+`WAIT` is not in the lab. It is a production measure, and the lab Redis has no replica for it to wait on. Adding it needs a replica container and one `WAIT 1 50` call between `INCR` and the insert.
+
+The summary is right, with one change. `clientMsgId` stops a retry from storing the same message twice. `clientSeq` is one device's own counter, so two devices can both send `clientSeq` 3. It records that device's send order, but it does not decide the chat order; the server `seq` does. The lab only flags a swap (`outOfOrder`). Keeping the order would need the server to hold or reject the early one (Option B).
+
+**Q: When do cases 3 and 4 happen in our design? Is Option D the only fix for case 4? What does the 0 in `WAIT 1 0` mean?** (2026-10-18)  
+A: Case 3, where Kim receives 9 before 8, happens three ways:
+
+- Pub/Sub drops the push of 8. It is at most once.
+- Kim reconnects. Connect subscribes first and drains second, so a live 9 can land while the drain is still reading 8.
+- 8 and 9 come from senders on different servers, so their publishes race.
+
+Case 4, where 6 is visible before 5, happens when two servers send into one chat at once. `INCR` and the insert are two steps, and server A is slower (a GC pause or a slow write). If A crashes between them, 5 never exists.
+
+The client rule handles both: insert by `seq`, ack only the highest contiguous seq, fill the gap, and skip a hole after a few seconds. Option D is not required. It and Option E make case 4 disappear, because the number and the row commit together, or one server writes in order. In Postgres, a crash in the transaction also rolls back the number, so no hole is left.
+
+Lab gap: "Ack contiguous" fills holes, but it never skips a permanent one. A seq taken by a failed send keeps the cursor below it.
+
+`WAIT 1 0` means wait for one replica with no time limit. If the replica is down, every send hangs, so use a timeout such as `WAIT 1 50`.
+
+**Q: Case 3 is solved by re-sorting, right? Is the case 4 hole a big deal, and does the retry get seq 7?** (2026-10-18)  
+A: Case 3, yes. The app inserts each message by `seq`, so a late 8 slots in between 7 and 9. The cursor waits until 8 is there.
+
+Case 4 leaves a hole at 5. It is not a big deal for the data. Nothing was stored, and nobody saw a message there. It matters in two places:
+
+- **Kim's cursor** must skip the hole after a few seconds, or every drain resends the rows after 5. The skip time must be longer than the server's longest write, so a slow real 5 is not skipped.
+- **Lee's retry** gets a new seq, 7, with the same `clientMsgId`. The lab had a bug here. The dead server's "pending" claim lasted 24 hours, so the retry got 409 for a day. The claim now lasts 5 seconds, and the 24-hour key is written only after the answer is saved.
+
+"Crash server mid-send" and the test `test_crash_mid_send_leaves_a_hole_and_the_retry_stores_later` show it.
+
+**Q: So the client handles holes and decides the ack, and the backend just stores it?** (2026-10-18)  
+A: Yes for the decision. Only the device knows what it holds, so the device sends the highest contiguous seq. It slots a late message in by `seq` and skips a hole after a few seconds.
+
+The backend keeps the cursor simple: one number per device per chat. It still enforces two rules.
+
+- **Forward only.** Postgres uses `GREATEST`, so a late ack never moves the cursor back. In Cassandra, a plain upsert can move it back, and an LWT stops that.
+- **No ack past the chat's newest seq.** A bug that acks 1,000,000 would skip every future message for that device. The lab now returns 422 for that.
+
+The backend also still assigns `seq`, stores rows, serves the gap fill and the drain, and checks membership.
+
+- **Option A: Client-side contiguous ack.** One number per device per chat. This is our pick.
+- **Option B: Server tracks each delivery** (Hello Interview's inbox, a row per message per device). The server knows exactly, but it pays a write and a delete for every message.
+- **Option C: Server checks for holes before it accepts an ack.** This costs a range read on every ack.
+
+A message that arrives after its hole was skipped still shows by live push. An offline device never drains it, because the cursor is past it. So the skip time must be longer than the server's longest write.
+
+**Q: What are Options A to F for who hands out the order?** (2026-10-18)  
+A: The README section "Message ordering" has the full list. In short:
+
+- **A: Client timestamp.** Never. Phone clocks are wrong, and users can change them.
+- **B: Server receive time (Hello Interview).** Simple. No gap detection, and ties need a tie-break.
+- **C: Per-chat counter in Redis (this design).** Dense numbers, so the drain and gap detection work. It needs the contiguous ack, and a counter that comes back low reuses a `seq`.
+- **D: Per-chat counter in the Postgres transaction.** `UPDATE chats SET last_seq = last_seq + 1 RETURNING last_seq` with the insert. Commit order matches `seq`, and a crash rolls the number back. A busy chat waits on that row. Postgres only.
+- **E: One owner server per chat.** Consistent hashing puts each chat on one server, which orders sends in memory (Slack's channel servers). You run the hash ring.
+- **F: Time-ordered id (Snowflake, Discord).** No coordination. The numbers have gaps by design, so no gap detection.
+
+**Q: In the hole case, did the message reach the server? What does "ack only the highest contiguous seq, gap fill" mean?** (2026-10-18)  
+A: The message did reach server A, and A took seq 5 from Redis. A died before it stored the message or replied, so 5 has no row. Nobody saw a message at 5, and Lee's phone retries the same `clientMsgId`, which is stored as a later seq. Only the number is lost.
+
+"Contiguous" means no gaps. "Gap fill" means asking the server for what is missing. Kim's phone has its cursor at 6. Live pushes brought 7 and 9, and the push of 8 was lost.
+
+| Step | The phone holds | What it does |
+| --- | --- | --- |
+| 1 | 7, 9 | Walk up from the cursor (6): 7 is there, 8 is missing, so stop. The highest contiguous seq is 7. Ack 7, not 9. |
+| 2 | 7, 9 | Gap fill: `GET /v1/chats/lee-kim/messages?afterSeq=7` |
+| 3 | 7, 8, 9 | The server returned 8 and 9. Walk again: all present. Ack 9. |
+| 3b | 7, 9 | 8 was not returned, so it was never stored (a hole). Wait a few seconds, then skip 8 and ack 9. |
+
+Why not ack 9 at step 1? The cursor would become 9, and the drain sends only `seq > 9`. The phone would never get 8. The code is the "Ack contiguous" handler in `src/static/index.html`, and the server check is `ack_message` in `src/main.py`.
+
+**Q: How does Hello Interview's timestamp order compare with our `seq`?** (2026-10-18)  
+A: Hello Interview has each chat server stamp the message with its own clock on arrival. NTP keeps the clocks within a few milliseconds of each other in the background, and no server asks a central clock per message. Devices sort by that time. Completeness comes from an inbox row per message per device, not from the order. Our design uses a per-chat Redis counter, because our cursor drain needs dense numbers.
+
+| | Server timestamp | Per-chat `seq` |
+| --- | --- | --- |
+| Good | No sequencer, no extra call, nothing to fail over | One exact order, gap detection, simple drain, no ties |
+| Bad | Rare swaps inside the clock skew, ties need a tie-break, no gap detection, needs an inbox | Redis on the send path, a counter can come back low, Cassandra needs a guard |
+
+The README section "Message ordering" has the full table, row by row.
+
+**Q: If Redis is down, do we fall back to a sequence in Postgres or Cassandra, or stop accepting messages? What failure takes the whole system down?** (2026-10-18)  
+A: We stop accepting sends for the affected chats, and return 503 "nothing stored, retry." The phone keeps the message in its outbox and retries, and a Redis failover takes seconds. Do not switch to a local counter during the outage. Servers that still reach Redis and servers on the fallback would both hand out the same `seq`. If the counter must survive Redis loss, use Option D (a counter row in Postgres `chats`) all the time.
+
+Redis's three jobs fail differently:
+
+- Counter loss stops sends for the chats on that shard.
+- Pub/Sub loss stops only the live push. Sends succeed with `livePush: failed`, and devices catch up by gap fill or drain.
+- Idempotency loss risks a duplicate on retry.
+
+The total outage is Postgres. In design 1 it holds everything. In design 2 every send and drain reads the roster from Postgres, unless each chat server caches it.
+
+The lab bug: a Pub/Sub failure after the store returned 500, so the retry could store the message twice. Sends now succeed when only the push fails. Reads now fall back to the stored maximum when Redis is down. The README section "What fails, and what still works" has the full table.
+
+**Q: Can the whole Redis cluster fail? What then?** (2026-10-18)  
+A: Yes, rarely. The causes:
+
+- A bad config push or upgrade reaches every node.
+- One shard loses both its primary and its replica. With the default `cluster-require-full-coverage yes`, the whole cluster then refuses requests.
+- Memory exhaustion, for example from slow Pub/Sub subscribers.
+- A zone or network split.
+
+The system becomes read-only. Every send gets 503, and there is no live push. Reads, drains, and acks still work, because they fall back to the store.
+
+- **Option A (pick):** accept read-only, and make it rare. Use replicas across zones, `cluster-require-full-coverage no`, and one-node-at-a-time rollouts. The outbox holds the messages.
+- **Option B:** Option D for the counter, so sends survive. It costs a Postgres write per send.
+- **Option C:** Option E, an owner server per chat. The hash ring becomes the dependency.
+- **Option D:** an emergency switch to a backup sequencer. It risks two sequencers.
+
+Polling `GET .../messages?afterSeq=` is the live-push backstop.
+
+**Q: When is last seen written? How do I know if someone is online? Is typing a periodic message to the other side?** (2026-10-18)  
+A: `last_seen` is written when a user's last device disconnects (socket close or a missed heartbeat), and the newer time wins. Hello Interview writes on disconnect only. Writing on connect too is an option for when a chat server crashes.
+
+"Online" is not stored. The requester's server reads `last_seen` and publishes `getLastSeen` on the target's user channel. If a server holds the target, it answers `ONLINE` on the requester's channel. The client shows ONLINE if that answer comes, otherwise the stored time.
+
+Typing is a throttled, unstored event: about one every 3 seconds while typing, published to members' user channels, hidden 5 seconds after the last one. It has no `seq`, no ack, and no drain. Read receipts come from the device cursor. The README table "Presence features: last seen, online, typing" compares all four. The lab fix: `last_seen` now keeps the newer time with `GREATEST`. The lab has no `getLastSeen` or `typing`.
+
+**Q: Summarize every out-of-order case, server side and client side.** (2026-10-18)  
+A: The README section "Message ordering" starts with two summary tables. They give each case, when it happens, what users would see, the fix, and how serious it is.
+
+The one serious case is a counter that goes back after a Redis failover or restart. Postgres rejects the reused `seq`, but Cassandra overwrites the old message. Every other case is either correct by design (the server order wins), or fixed by `clientMsgId`, the contiguous ack, the gap fill, and the hole skip.

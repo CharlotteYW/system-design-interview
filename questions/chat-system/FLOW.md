@@ -27,11 +27,13 @@ flowchart LR
 ## Send while online
 
 ```
-sendMessage -> { messageId, status }
+sendMessage -> { messageId, status, seq, duplicate }
 Body: {
   chatId,
   message,
-  attachments
+  attachments,
+  clientMsgId, // UUID per message. A retry sends the same one and gets the first seq back
+  clientSeq    // this device's own counter in this chat. Detects a swap
 }
 ```
 
@@ -79,13 +81,15 @@ sequenceDiagram
 The roster check stays in Postgres. The message row goes to Cassandra. The live push is the same.
 
 ```
-POST /v1/messages -> 202 Accepted { messageId, status, seq, storedIn }
+POST /v1/messages -> 202 Accepted { messageId, status, seq, duplicate, outOfOrder, storedIn }
 Body: {
   chatId,
   message,
-  mediaKey, // optional
-  serverId, // A | B
-  clientId
+  mediaKey,    // optional
+  serverId,    // A | B
+  clientId,
+  clientMsgId, // optional UUID per message
+  clientSeq    // optional device counter
 }
 storedIn: { store: "cassandra", table: "messages_by_chat", partition: { chat_id, bucket }, clustering: { seq }, ttlSeconds }
 ```

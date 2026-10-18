@@ -28,7 +28,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
-from .message_store import CassandraMessageStore, PostgresMessageStore
+from .message_store import CassandraMessageStore, PostgresMessageStore, SeqCollision
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://app:app@localhost:5432/app"
@@ -172,7 +172,7 @@ def clear_runtime_state() -> None:
 
     Users, chats, members, and the device catalog stay. Every try starts empty.
     """
-    global pubsub_log
+    global pubsub_log, pubsub_down
     store.clear()
     with connect_db() as conn:
         conn.execute("TRUNCATE TABLE last_seen")
@@ -188,8 +188,12 @@ def clear_runtime_state() -> None:
 
     for key in redis_client.scan_iter(match="chat:*:seq"):
         redis_client.delete(key)
-    for key in redis_client.scan_iter(match="user:*:server"):
-        redis_client.delete(key)
+    for pattern in ("user:*:server", "idem:*", "clientseq:*"):
+        for key in redis_client.scan_iter(match=pattern):
+            redis_client.delete(key)
+    pubsub_down = False
+    seq_guard_off.clear()
+    drop_next_push.clear()
 
     with _lock:
         for sid in SERVERS:
@@ -257,8 +261,64 @@ def chat_channel(chat_id: str) -> str:
     return f"chat:{chat_id}"
 
 
-def next_seq(chat_id: str) -> int:
-    return int(redis_client.incr(f"chat:{chat_id}:seq"))
+def seq_key(chat_id: str) -> str:
+    return f"chat:{chat_id}:seq"
+
+
+# INCR only when the counter exists. A missing counter (Redis restart, or a
+# failover to a replica without it) returns -1 so the caller reseeds first.
+_incr_if_exists = redis_client.register_script(
+    """
+    if redis.call('EXISTS', KEYS[1]) == 0 then return -1 end
+    return redis.call('INCR', KEYS[1])
+    """
+)
+# Keep the highest client counter seen; return the previous one.
+_client_seq_max = redis_client.register_script(
+    """
+    local prev = tonumber(redis.call('GET', KEYS[1]) or '0')
+    local new = tonumber(ARGV[1])
+    if new > prev then redis.call('SET', KEYS[1], new) end
+    return prev
+    """
+)
+
+# Lab switches. A chat in seq_guard_off skips the reseed on its next send,
+# to show what a reused seq does. A client in drop_next_push loses its next
+# live push, to show a gap and the gap fill.
+seq_guard_off: set[str] = set()
+drop_next_push: set[str] = set()
+
+
+def next_seq(chat_id: str, guard: bool = True) -> tuple[int, dict | None]:
+    """Return (seq, seeded). seeded names the store max when the counter was rebuilt."""
+    key = seq_key(chat_id)
+    if not guard:
+        return int(redis_client.incr(key)), {"guard": "off", "from": "empty counter"}
+    value = int(_incr_if_exists(keys=[key]))
+    if value != -1:
+        return value, None
+    top = store.max_seq(chat_id)
+    redis_client.set(key, top, nx=True)
+    return int(redis_client.incr(key)), {"guard": "on", "from": "store", "maxStoredSeq": top}
+
+
+def chat_newest_seq(chat_id: str) -> int:
+    """The newest seq handed out. Reads keep working when Redis is down."""
+    try:
+        value = int(redis_client.get(seq_key(chat_id)) or 0)
+    except redis.exceptions.RedisError:
+        value = 0
+    return value or store.max_seq(chat_id)
+
+
+def reseed_seq(chat_id: str) -> int:
+    top = store.max_seq(chat_id)
+    key = seq_key(chat_id)
+    current = int(redis_client.get(key) or 0)
+    if top > current:
+        redis_client.set(key, top)
+    return top
 
 
 def log_pubsub(action: str, channel: str, server_id: str, detail: str = "") -> None:
@@ -301,7 +361,12 @@ def member_count(chat_id: str) -> int:
     return int(row["n"])
 
 
+pubsub_down = False  # lab switch: every publish fails, as if Pub/Sub were down
+
+
 def publish_live(chat_id: str, message: dict) -> None:
+    if pubsub_down:
+        raise redis.exceptions.ConnectionError("lab: Redis Pub/Sub is down")
     with connect_db() as conn:
         members = conn.execute(
             "SELECT user_id FROM chat_members WHERE chat_id = %s",
@@ -360,6 +425,11 @@ def handle_redis_message(server_id: str, channel: str, raw: str) -> None:
                 for client_id, sock in sockets[server_id].items()
                 if socket_owner.get(client_id) == user_id
             ]
+            dropped = [t for t in targets if t[0] in drop_next_push]
+            for client_id, _ in dropped:
+                drop_next_push.discard(client_id)
+                log_pubsub("DROP", channel, server_id, f"lab dropped push to {client_id}")
+            targets = [t for t in targets if t not in dropped]
             for client_id, _ in targets:
                 mailbox_append_unique(client_id, envelope)
         for _, sock in targets:
@@ -437,9 +507,13 @@ def subscribe_user(server_id: str, user_id: str) -> None:
     channel = user_channel(user_id)
     with _lock:
         subscribed[server_id].add(channel)
-    redis_client.publish("__chat_lab_control__", "refresh")
-    redis_client.set(f"user:{user_id}:server", server_id)
-    log_pubsub("SUBSCRIBE", channel, server_id)
+    try:
+        redis_client.publish("__chat_lab_control__", "refresh")
+        redis_client.set(f"user:{user_id}:server", server_id)
+        log_pubsub("SUBSCRIBE", channel, server_id)
+    except redis.exceptions.RedisError:
+        # No live push until Redis returns. The connect still drains from the store.
+        log_pubsub("SUBSCRIBE-FAILED", channel, server_id)
 
 
 def unsubscribe_user_if_idle(server_id: str, user_id: str) -> None:
@@ -458,10 +532,13 @@ def unsubscribe_user_if_idle(server_id: str, user_id: str) -> None:
             channel = user_channel(user_id)
             subscribed[server_id].discard(channel)
             log_pubsub("UNSUBSCRIBE", channel, server_id)
-            # clear presence if this server owned it
-            if redis_client.get(f"user:{user_id}:server") == server_id:
-                redis_client.delete(f"user:{user_id}:server")
-    redis_client.publish("__chat_lab_control__", "refresh")
+    try:
+        # clear presence if this server owned it
+        if not still and redis_client.get(f"user:{user_id}:server") == server_id:
+            redis_client.delete(f"user:{user_id}:server")
+        redis_client.publish("__chat_lab_control__", "refresh")
+    except redis.exceptions.RedisError:
+        pass  # Presence is a hint. A stale entry does not route any message.
 
 
 def drain_client(client_id: str, user_id: str) -> tuple[list[dict], list[dict]]:
@@ -478,7 +555,7 @@ def drain_client(client_id: str, user_id: str) -> tuple[list[dict], list[dict]]:
     for chat in chats:
         chat_id = chat["chat_id"]
         last_seq = store.read_cursor(client_id, chat_id)
-        current_seq = int(redis_client.get(f"chat:{chat_id}:seq") or 0)
+        current_seq = chat_newest_seq(chat_id)
         rows, chat_reads = store.read_after(chat_id, last_seq, current_seq)
         reads.extend(chat_reads)
         for msg in rows:
@@ -501,7 +578,8 @@ def set_last_seen(user_id: str) -> None:
             """
             INSERT INTO last_seen (user_id, disconnected_at)
             VALUES (%s, %s)
-            ON CONFLICT (user_id) DO UPDATE SET disconnected_at = EXCLUDED.disconnected_at
+            ON CONFLICT (user_id) DO UPDATE
+            SET disconnected_at = GREATEST(last_seen.disconnected_at, EXCLUDED.disconnected_at)
             """,
             (user_id, now_utc()),
         )
@@ -540,6 +618,17 @@ class SendMessageBody(BaseModel):
     mediaKey: str = ""
     serverId: str = "A"
     clientId: str
+    clientMsgId: str = ""  # one UUID per message; a retry sends the same one
+    clientSeq: int | None = None  # this device's own counter in this chat
+
+
+class DropPushBody(BaseModel):
+    clientId: str
+
+
+class LoseCounterBody(BaseModel):
+    chatId: str
+    guard: bool = True
 
 
 class AckBody(BaseModel):
@@ -705,20 +794,92 @@ def send_message(body: SendMessageBody) -> dict:
     if body.serverId not in SERVERS:
         raise HTTPException(status_code=422, detail="serverId must be A or B")
 
+    idem = f"idem:{body.clientId}:{body.clientMsgId}" if body.clientMsgId else None
+    # The claim is short. If this server dies before it saves the answer, the
+    # claim expires and the phone's retry can store the message.
+    try:
+        claimed = not idem or redis_client.set(idem, "pending", nx=True, ex=IDEM_PENDING_SECONDS)
+    except redis.exceptions.RedisError as exc:
+        raise HTTPException(status_code=503, detail=f"Redis unavailable, nothing stored, retry: {exc}")
+    if not claimed:
+        return replay_idempotent(idem)
+    try:
+        result = store_and_publish(body, client["user_id"])
+    except redis.exceptions.RedisError as exc:
+        # The seq counter is in Redis and comes before the insert, so nothing was stored.
+        raise HTTPException(status_code=503, detail=f"seq counter unavailable, nothing stored, retry: {exc}")
+    except Exception:
+        if idem:
+            redis_client.delete(idem)  # let a retry run again
+        raise
+    if idem:
+        try:
+            redis_client.set(idem, json.dumps(result), ex=IDEM_TTL_SECONDS)
+        except redis.exceptions.RedisError:
+            pass  # The row is stored. A later retry may duplicate; the client drops it by clientMsgId.
+    return result
+
+
+IDEM_TTL_SECONDS = 24 * 3600
+# Lab value. Production would use about 30 seconds, longer than one slow send.
+IDEM_PENDING_SECONDS = int(os.environ.get("IDEM_PENDING_SECONDS", "5"))
+
+
+def replay_idempotent(idem: str) -> dict:
+    """A retry with a clientMsgId we already saw returns the first answer."""
+    for _ in range(40):
+        value = redis_client.get(idem)
+        if value and value != "pending":
+            first = json.loads(value)
+            return {**first, "duplicate": True}
+        time.sleep(0.05)
+    raise HTTPException(status_code=409, detail="the same clientMsgId is still in flight")
+
+
+def store_and_publish(body: SendMessageBody, sender_user: str) -> dict:
+    out_of_order = False
+    if body.clientSeq is not None:
+        prev = int(
+            _client_seq_max(keys=[f"clientseq:{body.clientId}:{body.chatId}"], args=[body.clientSeq])
+        )
+        out_of_order = body.clientSeq <= prev
+
+    guard = body.chatId not in seq_guard_off
+    seq_guard_off.discard(body.chatId)
     message_id = str(uuid.uuid4())
-    seq = next_seq(body.chatId)
     created = now_utc()
-    stored_in = store.insert_message(
-        {
+    seeded = None
+    for attempt in range(2):
+        seq, seeded_now = next_seq(body.chatId, guard=guard)
+        seeded = seeded or seeded_now
+        row = {
             "id": message_id,
             "chat_id": body.chatId,
             "seq": seq,
-            "sender_id": client["user_id"],
+            "sender_id": sender_user,
             "body": body.message,
             "media_key": body.mediaKey,
             "created_at": created,
+            "client_msg_id": body.clientMsgId,
+            "client_seq": body.clientSeq,
         }
-    )
+        try:
+            stored_in = store.insert_message(row, check_overwrite=not guard)
+            break
+        except SeqCollision:
+            # Postgres: UNIQUE (chat_id, seq) caught a reused seq. A counter
+            # that came back low after a failover does this.
+            if not guard or attempt:
+                reseed_seq(body.chatId)
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"seq {seq} in {body.chatId} is already taken: the counter came back low",
+                )
+            seeded = {"guard": "on", "from": "collision", "maxStoredSeq": reseed_seq(body.chatId)}
+    if not guard:
+        # Lab only: repair the counter after the one demo send, so later sends
+        # in Cassandra do not keep overwriting rows.
+        reseed_seq(body.chatId)
     # Postgres design: same connection pool, two statements. Cassandra design:
     # two independent writes, no transaction. At least once covers the gap.
     store.set_sender_cursor(body.clientId, body.chatId, seq)
@@ -727,18 +888,58 @@ def send_message(body: SendMessageBody) -> dict:
         "id": message_id,
         "chat_id": body.chatId,
         "seq": seq,
-        "sender_id": client["user_id"],
+        "sender_id": sender_user,
         "body": body.message,
         "media_key": body.mediaKey,
+        "client_msg_id": body.clientMsgId,
+        "client_seq": body.clientSeq,
         "created_at": created.isoformat(),
     }
-    publish_live(body.chatId, message)
+    # The row is stored. The live push is best effort: if Pub/Sub fails, the
+    # send still succeeds, and recipients get the row on the next drain or sync.
+    try:
+        publish_live(body.chatId, message)
+        live_push = "sent"
+    except redis.exceptions.RedisError as exc:
+        live_push = f"failed: {exc}"
+        log_pubsub("PUBLISH-FAILED", f"user:* for {body.chatId}", "-", message["id"])
     # Also put on sender mailbox so the UI can show send path.
     mailbox_append_unique(
         body.clientId,
         {"type": "sendAck", "message": message, "via": "local-store"},
     )
-    return {"messageId": message_id, "status": "SUCCESS", "seq": seq, "storedIn": stored_in}
+    result = {
+        "messageId": message_id,
+        "status": "SUCCESS",
+        "seq": seq,
+        "clientMsgId": body.clientMsgId,
+        "clientSeq": body.clientSeq,
+        "duplicate": False,
+        "outOfOrder": out_of_order,
+        "storedIn": stored_in,
+        "livePush": live_push,
+    }
+    if seeded:
+        result["seqSeeded"] = seeded
+    return result
+
+
+@app.get("/v1/chats/{chat_id}/messages")
+def list_messages(chat_id: str, clientId: str, afterSeq: int = 0) -> dict:
+    """Gap fill and catch-up: every message in this chat after afterSeq, in seq order."""
+    with connect_db() as conn:
+        member = conn.execute(
+            """
+            SELECT 1 FROM chat_members m JOIN clients c ON c.user_id = m.user_id
+            WHERE m.chat_id = %s AND c.id = %s
+            """,
+            (chat_id, clientId),
+        ).fetchone()
+    if member is None:
+        raise HTTPException(status_code=403, detail="not a chat member")
+    current = chat_newest_seq(chat_id)
+    rows, reads = store.read_after(chat_id, afterSeq, current)
+    return {"chatId": chat_id, "afterSeq": afterSeq, "messages": rows[:100], "reads": reads}
 
 
 def default_ack_mode() -> str:
@@ -747,6 +948,14 @@ def default_ack_mode() -> str:
 
 @app.post("/v1/ack")
 def ack_message(body: AckBody) -> dict:
+    # The client decides what it holds. The server only refuses a number the
+    # chat never reached, so a buggy client cannot skip every future message.
+    current = chat_newest_seq(body.chatId)
+    if body.seq > current:
+        raise HTTPException(
+            status_code=422,
+            detail=f"seq {body.seq} is past the newest seq {current} in {body.chatId}",
+        )
     result = store.ack(body.clientId, body.chatId, body.seq, mode=body.mode or default_ack_mode())
     return {"clientId": body.clientId, "chatId": body.chatId, "seq": body.seq, "cursor": result}
 
@@ -764,6 +973,58 @@ def clear_mailbox(client_id: str) -> dict:
     return {"clientId": client_id, "cleared": True}
 
 
+@app.post("/v1/lab/drop-next-push")
+def lab_drop_next_push(body: DropPushBody) -> dict:
+    drop_next_push.add(body.clientId)
+    return {"clientId": body.clientId, "dropNextPush": True}
+
+
+class PubSubDownBody(BaseModel):
+    down: bool
+
+
+@app.post("/v1/lab/pubsub-down")
+def lab_pubsub_down(body: PubSubDownBody) -> dict:
+    global pubsub_down
+    pubsub_down = body.down
+    return {"pubsubDown": pubsub_down}
+
+
+class CrashMidSendBody(BaseModel):
+    chatId: str
+    clientId: str
+    clientMsgId: str
+
+
+@app.post("/v1/lab/crash-mid-send")
+def lab_crash_mid_send(body: CrashMidSendBody) -> dict:
+    """Do what a server does before it dies: claim the id, take a seq, then stop."""
+    idem = f"idem:{body.clientId}:{body.clientMsgId}"
+    claimed = bool(redis_client.set(idem, "pending", nx=True, ex=IDEM_PENDING_SECONDS))
+    seq, _ = next_seq(body.chatId)
+    return {
+        "chatId": body.chatId,
+        "clientMsgId": body.clientMsgId,
+        "claimed": claimed,
+        "seqTaken": seq,
+        "stored": False,
+        "pendingExpiresInSeconds": IDEM_PENDING_SECONDS,
+    }
+
+
+@app.post("/v1/lab/lose-seq-counter")
+def lab_lose_seq_counter(body: LoseCounterBody) -> dict:
+    deleted = bool(redis_client.delete(seq_key(body.chatId)))
+    if not body.guard:
+        seq_guard_off.add(body.chatId)
+    return {
+        "chatId": body.chatId,
+        "counterDeleted": deleted,
+        "guard": body.guard,
+        "maxStoredSeq": store.max_seq(body.chatId),
+    }
+
+
 @app.post("/v1/lab/reset")
 def lab_reset() -> dict:
     clear_runtime_state()
@@ -778,6 +1039,18 @@ def lab_reset() -> dict:
         "cleared": message_tables + ["last_seen", "clients", "redis", "mailboxes"],
         "kept": ["users", "chats", "chat_members"],
     }
+
+
+def idempotency_snapshot() -> dict:
+    out = {}
+    for key in list(redis_client.scan_iter(match="idem:*", count=200))[:20]:
+        value = redis_client.get(key)
+        if value and value != "pending":
+            first = json.loads(value)
+            out[key] = {"seq": first.get("seq"), "messageId": first.get("messageId"), "ttl": redis_client.ttl(key)}
+        else:
+            out[key] = value
+    return out
 
 
 @app.get("/v1/lab/state")
@@ -822,14 +1095,18 @@ def lab_state() -> dict:
             online[sid] = list(sockets[sid].keys())
         subs = {sid: sorted(subscribed[sid]) for sid in SERVERS}
 
-    presence = {}
-    for user in users:
-        key = f"user:{user['id']}:server"
-        presence[user["id"]] = redis_client.get(key)
-
-    seq_keys = {}
-    for chat in chats:
-        seq_keys[chat["id"]] = int(redis_client.get(f"chat:{chat['id']}:seq") or 0)
+    presence: dict = {}
+    seq_keys: dict = {}
+    redis_ok = True
+    try:
+        for user in users:
+            presence[user["id"]] = redis_client.get(f"user:{user['id']}:server")
+        for chat in chats:
+            seq_keys[chat["id"]] = int(redis_client.get(seq_key(chat["id"])) or 0)
+        idem_keys = idempotency_snapshot()
+    except redis.exceptions.RedisError:
+        redis_ok = False
+        idem_keys = {}
 
     postgres_tables = {
         "users": [_jsonable(r) for r in users],
@@ -866,6 +1143,8 @@ def lab_state() -> dict:
             "subscriptions": subs,
             "presence": presence,
             "chatSeq": seq_keys,
+            "idempotencyKeys": idem_keys,
+            "reachable": redis_ok,
             "pubsubLog": pubsub_log[-30:],
         },
     }
@@ -914,6 +1193,8 @@ async def websocket_endpoint(websocket: WebSocket, server_id: str, client_id: st
                         chatId=payload["chatId"],
                         message=payload.get("message", ""),
                         mediaKey=payload.get("mediaKey", ""),
+                        clientMsgId=payload.get("clientMsgId", ""),
+                        clientSeq=payload.get("clientSeq"),
                         serverId=server_id,
                         clientId=client_id,
                     )

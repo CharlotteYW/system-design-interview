@@ -146,6 +146,148 @@ def test_cross_server_push_reaches_a_real_websocket(client: httpx.Client, design
             raise AssertionError(f"{design}: no live push on the WebSocket")
 
 
+def test_concurrent_sends_get_unique_contiguous_seq(client: httpx.Client) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(i: int) -> int:
+        sender, server = ("lee-phone", "A") if i % 2 else ("kim-phone", "B")
+        with httpx.Client(base_url=client.base_url, timeout=20.0) as http:
+            created = http.post(
+                "/v1/messages",
+                json={"chatId": "lee-kim", "message": f"race-{i}", "serverId": server, "clientId": sender},
+            )
+            assert created.status_code == 202, created.text
+            return created.json()["seq"]
+
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        seqs = sorted(pool.map(one, range(20)))
+    assert len(set(seqs)) == 20, seqs
+    assert seqs == list(range(seqs[0], seqs[0] + 20)), "INCR hands out one block with no holes"
+
+
+def test_retry_with_same_client_msg_id_stores_once(client: httpx.Client) -> None:
+    cmid = f"retry-{uuid.uuid4()}"
+    payload = {"chatId": "lee-kim", "message": cmid, "serverId": "A", "clientId": "lee-phone", "clientMsgId": cmid}
+    first = client.post("/v1/messages", json=payload).json()
+    again = client.post("/v1/messages", json=payload).json()
+    assert first["duplicate"] is False and again["duplicate"] is True
+    assert again["seq"] == first["seq"] and again["messageId"] == first["messageId"]
+    rows = client.get("/v1/chats/lee-kim/messages", params={"clientId": "lee-phone", "afterSeq": first["seq"] - 1}).json()
+    assert [m["body"] for m in rows["messages"]].count(cmid) == 1
+
+
+def test_client_seq_flags_a_swapped_pair(client: httpx.Client) -> None:
+    chat = client.post("/v1/chats", json={"participants": ["lee"], "clientId": "kim-laptop"}).json()["chatId"]
+    base = {"chatId": chat, "serverId": "B", "clientId": "kim-laptop"}
+    top = client.get(f"/v1/chats/{chat}/messages", params={"clientId": "kim-laptop"}).json()["messages"]
+    n = max([m["client_seq"] or 0 for m in top], default=0)
+    second = client.post("/v1/messages", json={**base, "message": "second", "clientSeq": n + 2}).json()
+    first = client.post("/v1/messages", json={**base, "message": "first", "clientSeq": n + 1}).json()
+    assert second["outOfOrder"] is False and first["outOfOrder"] is True
+    assert first["seq"] > second["seq"], "server order wins: the late one gets the higher seq"
+
+
+def test_lost_counter_is_rebuilt_from_the_store(client: httpx.Client) -> None:
+    before = send(client, "lee-kim", f"before-{uuid.uuid4()}")["seq"]
+    lost = client.post("/v1/lab/lose-seq-counter", json={"chatId": "lee-kim", "guard": True}).json()
+    assert lost["counterDeleted"] is True and lost["maxStoredSeq"] >= before
+    after = send(client, "lee-kim", f"after-{uuid.uuid4()}")
+    assert after["seq"] == lost["maxStoredSeq"] + 1
+    assert after["seqSeeded"]["from"] == "store"
+
+
+def test_lost_counter_without_guard_reuses_a_seq(client: httpx.Client, design: str) -> None:
+    send(client, "lee-kim", f"keep-{uuid.uuid4()}")
+    client.post("/v1/lab/lose-seq-counter", json={"chatId": "lee-kim", "guard": False})
+    response = client.post(
+        "/v1/messages",
+        json={"chatId": "lee-kim", "message": "reused", "serverId": "A", "clientId": "lee-phone"},
+    )
+    if design == "postgres":
+        assert response.status_code == 409, "UNIQUE (chat_id, seq) rejects the reused seq"
+    else:
+        assert response.status_code == 202
+        assert response.json()["seq"] == 1
+        assert "overwrote" in response.json()["storedIn"], "Cassandra upserts over the old row"
+    follow = send(client, "lee-kim", f"follow-{uuid.uuid4()}")
+    assert "overwrote" not in follow["storedIn"], "the lab repairs the counter after the demo send"
+
+
+def test_dropped_push_leaves_a_gap_that_gap_fill_closes(client: httpx.Client) -> None:
+    client.post("/v1/lab/connect", json={"serverId": "A", "clientId": "lee-phone"})
+    client.post("/v1/lab/connect", json={"serverId": "B", "clientId": "kim-phone"})
+    client.post("/v1/lab/drop-next-push", json={"clientId": "kim-phone"})
+    lost_body, kept_body = f"lost-{uuid.uuid4()}", f"kept-{uuid.uuid4()}"
+    lost = send(client, "lee-kim", lost_body)
+    send(client, "lee-kim", kept_body)
+    news = wait_mailbox(client, "kim-phone", body=kept_body)
+    assert not any(item["message"]["body"] == lost_body for item in news), "the push was dropped"
+    fill = client.get(
+        "/v1/chats/lee-kim/messages", params={"clientId": "kim-phone", "afterSeq": lost["seq"] - 1}
+    ).json()
+    assert [m["body"] for m in fill["messages"]][:2] == [lost_body, kept_body]
+    state = client.get("/v1/lab/state").json()
+    assert "DROP" in [row["action"] for row in state["redis"]["pubsubLog"]]
+
+
+def test_crash_mid_send_leaves_a_hole_and_the_retry_stores_later(client: httpx.Client) -> None:
+    cmid = f"crash-{uuid.uuid4()}"
+    crash = client.post(
+        "/v1/lab/crash-mid-send", json={"chatId": "lee-kim", "clientId": "lee-phone", "clientMsgId": cmid}
+    ).json()
+    hole = crash["seqTaken"]
+    payload = {"chatId": "lee-kim", "message": cmid, "serverId": "A", "clientId": "lee-phone", "clientMsgId": cmid}
+
+    early = client.post("/v1/messages", json=payload)
+    assert early.status_code == 409, "the dead server's claim is still pending"
+
+    time.sleep(crash["pendingExpiresInSeconds"] + 0.5)
+    retry = client.post("/v1/messages", json=payload)
+    assert retry.status_code == 202, retry.text
+    assert retry.json()["duplicate"] is False and retry.json()["seq"] > hole
+
+    rows = client.get(
+        "/v1/chats/lee-kim/messages", params={"clientId": "kim-phone", "afterSeq": hole - 1}
+    ).json()["messages"]
+    assert rows[0]["seq"] > hole, f"seq {hole} stays a hole"
+    assert [m["body"] for m in rows].count(cmid) == 1
+
+
+def test_ack_past_the_newest_seq_is_rejected(client: httpx.Client) -> None:
+    newest = send(client, "lee-kim", f"top-{uuid.uuid4()}")["seq"]
+    bad = client.post("/v1/ack", json={"clientId": "kim-laptop", "chatId": "lee-kim", "seq": newest + 1000})
+    assert bad.status_code == 422
+    assert cursor_of(client, "kim-laptop", "lee-kim") <= newest
+
+
+def test_pubsub_down_still_stores_and_sync_catches_up(client: httpx.Client) -> None:
+    client.post("/v1/lab/connect", json={"serverId": "A", "clientId": "lee-phone"})
+    client.post("/v1/lab/connect", json={"serverId": "B", "clientId": "kim-phone"})
+    client.post("/v1/lab/pubsub-down", json={"down": True})
+    try:
+        body = f"no-bus-{uuid.uuid4()}"
+        sent = client.post(
+            "/v1/messages",
+            json={"chatId": "lee-kim", "message": body, "serverId": "A", "clientId": "lee-phone"},
+        )
+        assert sent.status_code == 202, "the store worked, so the send succeeds"
+        assert sent.json()["livePush"].startswith("failed")
+        time.sleep(0.5)
+        box = client.get("/v1/lab/mailbox/kim-phone").json()["items"]
+        assert not any(i.get("message", {}).get("body") == body for i in box), "no live push"
+        fill = client.get(
+            "/v1/chats/lee-kim/messages", params={"clientId": "kim-phone", "afterSeq": sent.json()["seq"] - 1}
+        ).json()
+        assert fill["messages"][0]["body"] == body, "the sync read still finds it"
+    finally:
+        client.post("/v1/lab/pubsub-down", json={"down": False})
+
+
+def test_gap_fill_rejects_non_member(client: httpx.Client) -> None:
+    response = client.get("/v1/chats/lee-kim/messages", params={"clientId": "ada-phone"})
+    assert response.status_code == 403
+
+
 def test_create_chat_rejects_unknown_user(client: httpx.Client) -> None:
     response = client.post("/v1/chats", json={"participants": ["nobody"], "clientId": "ada-phone"})
     assert response.status_code == 404

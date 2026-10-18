@@ -17,6 +17,15 @@ BUCKET_SIZE = int(os.environ.get("CASSANDRA_BUCKET_SIZE", "5"))
 MESSAGE_TTL_SECONDS = 30 * 24 * 3600
 
 
+class SeqCollision(Exception):
+    """The seq for this chat already names a stored message."""
+
+    def __init__(self, chat_id: str, seq: int):
+        super().__init__(f"seq {seq} in {chat_id} is already taken")
+        self.chat_id = chat_id
+        self.seq = seq
+
+
 def _iso(value):
     if isinstance(value, datetime):
         if value.tzinfo is None:
@@ -48,6 +57,10 @@ class PostgresMessageStore:
                 """
             )
             conn.execute(
+                "ALTER TABLE messages ADD COLUMN IF NOT EXISTS client_msg_id TEXT NOT NULL DEFAULT ''"
+            )
+            conn.execute("ALTER TABLE messages ADD COLUMN IF NOT EXISTS client_seq INT")
+            conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS device_cursors (
                   client_id TEXT NOT NULL,
@@ -65,26 +78,42 @@ class PostgresMessageStore:
             conn.execute("TRUNCATE TABLE messages, device_cursors")
             conn.commit()
 
-    def insert_message(self, msg: dict) -> dict:
-        with self.connect_db() as conn:
-            conn.execute(
-                """
-                INSERT INTO messages (
-                  id, chat_id, seq, sender_id, body, media_key, created_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    msg["id"],
-                    msg["chat_id"],
-                    msg["seq"],
-                    msg["sender_id"],
-                    msg["body"],
-                    msg["media_key"],
-                    msg["created_at"],
-                ),
-            )
-            conn.commit()
+    def insert_message(self, msg: dict, check_overwrite: bool = False) -> dict:
+        import psycopg
+
+        try:
+            with self.connect_db() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO messages (
+                      id, chat_id, seq, sender_id, body, media_key, created_at,
+                      client_msg_id, client_seq
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """,
+                    (
+                        msg["id"],
+                        msg["chat_id"],
+                        msg["seq"],
+                        msg["sender_id"],
+                        msg["body"],
+                        msg["media_key"],
+                        msg["created_at"],
+                        msg.get("client_msg_id", ""),
+                        msg.get("client_seq"),
+                    ),
+                )
+                conn.commit()
+        except psycopg.errors.UniqueViolation as exc:
+            raise SeqCollision(msg["chat_id"], msg["seq"]) from exc
         return {"store": "postgres", "table": "messages", "key": {"id": msg["id"]}}
+
+    def max_seq(self, chat_id: str) -> int:
+        with self.connect_db() as conn:
+            row = conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) AS m FROM messages WHERE chat_id = %s",
+                (chat_id,),
+            ).fetchone()
+        return int(row["m"])
 
     def set_sender_cursor(self, client_id: str, chat_id: str, seq: int) -> None:
         self.ack(client_id, chat_id, seq, mode="greatest")
@@ -104,7 +133,8 @@ class PostgresMessageStore:
         with self.connect_db() as conn:
             rows = conn.execute(
                 """
-                SELECT id, chat_id, seq, sender_id, body, media_key, created_at
+                SELECT id, chat_id, seq, sender_id, body, media_key, created_at,
+                       client_msg_id, client_seq
                 FROM messages
                 WHERE chat_id = %s AND seq > %s
                 ORDER BY seq
@@ -147,7 +177,8 @@ class PostgresMessageStore:
         with self.connect_db() as conn:
             messages = conn.execute(
                 """
-                SELECT id, chat_id, seq, sender_id, body, media_key, created_at
+                SELECT id, chat_id, seq, sender_id, body, media_key,
+                       client_msg_id, client_seq, created_at
                 FROM messages ORDER BY created_at DESC LIMIT 40
                 """
             ).fetchall()
@@ -213,6 +244,11 @@ class CassandraMessageStore:
               AND default_time_to_live = {MESSAGE_TTL_SECONDS}
             """
         )
+        for column, kind in (("client_msg_id", "text"), ("client_seq", "int")):
+            try:
+                s.execute(f"ALTER TABLE messages_by_chat ADD {column} {kind}")
+            except Exception:  # The column already exists after the first start.
+                pass
         s.execute(
             """
             CREATE TABLE IF NOT EXISTS device_cursors_by_client (
@@ -227,15 +263,30 @@ class CassandraMessageStore:
         self.q_insert = s.prepare(
             """
             INSERT INTO messages_by_chat
-              (chat_id, bucket, seq, id, sender_id, body, media_key, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              (chat_id, bucket, seq, id, sender_id, body, media_key, created_at,
+               client_msg_id, client_seq)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
         )
         self.q_read_bucket = s.prepare(
             """
-            SELECT chat_id, bucket, seq, id, sender_id, body, media_key, created_at
+            SELECT chat_id, bucket, seq, id, sender_id, body, media_key, created_at,
+                   client_msg_id, client_seq
             FROM messages_by_chat
             WHERE chat_id = ? AND bucket = ? AND seq > ?
+            """
+        )
+        self.q_row_at = s.prepare(
+            """
+            SELECT id, body FROM messages_by_chat
+            WHERE chat_id = ? AND bucket = ? AND seq = ?
+            """
+        )
+        self.q_top_of_bucket = s.prepare(
+            """
+            SELECT seq FROM messages_by_chat
+            WHERE chat_id = ? AND bucket = ?
+            ORDER BY seq DESC LIMIT 1
             """
         )
         self.q_cursor = s.prepare(
@@ -275,8 +326,17 @@ class CassandraMessageStore:
         self.session.execute("TRUNCATE messages_by_chat")
         self.session.execute("TRUNCATE device_cursors_by_client")
 
-    def insert_message(self, msg: dict) -> dict:
+    def insert_message(self, msg: dict, check_overwrite: bool = False) -> dict:
         bucket = self.bucket_for(msg["seq"])
+        overwrote = None
+        if check_overwrite:
+            # Lab-only read before the write, to show what a reused seq does.
+            # Cassandra itself never checks: an insert on the same key is an upsert.
+            old = self.session.execute(
+                self.q_row_at, (msg["chat_id"], bucket, msg["seq"])
+            ).one()
+            if old:
+                overwrote = {"messageId": old["id"], "body": old["body"]}
         self.session.execute(
             self.q_insert,
             (
@@ -288,15 +348,31 @@ class CassandraMessageStore:
                 msg["body"],
                 msg["media_key"],
                 msg["created_at"],
+                msg.get("client_msg_id", ""),
+                msg.get("client_seq"),
             ),
         )
-        return {
+        result = {
             "store": "cassandra",
             "table": "messages_by_chat",
             "partition": {"chat_id": msg["chat_id"], "bucket": bucket},
             "clustering": {"seq": msg["seq"]},
             "ttlSeconds": MESSAGE_TTL_SECONDS,
         }
+        if overwrote:
+            result["overwrote"] = overwrote
+        return result
+
+    def max_seq(self, chat_id: str) -> int:
+        # Buckets fill in seq order, so walk up until a bucket is empty.
+        # Production keeps a high-water mark instead of scanning.
+        top, bucket = 0, 0
+        while True:
+            row = self.session.execute(self.q_top_of_bucket, (chat_id, bucket)).one()
+            if row is None:
+                return top
+            top = max(top, int(row["seq"]))
+            bucket += 1
 
     def set_sender_cursor(self, client_id: str, chat_id: str, seq: int) -> None:
         self.session.execute(
@@ -359,6 +435,7 @@ class CassandraMessageStore:
             self.session.execute(
                 """
                 SELECT chat_id, bucket, seq, id, sender_id, body, media_key, created_at,
+                       client_msg_id, client_seq,
                        token(chat_id, bucket) AS partition_token,
                        TTL(body) AS ttl_seconds,
                        WRITETIME(body) AS writetime_us
@@ -379,6 +456,7 @@ class CassandraMessageStore:
                     "sender_id": r["sender_id"],
                     "body": r["body"],
                     "media_key": r["media_key"],
+                    "client_seq": r["client_seq"],
                     "ttl_seconds": r["ttl_seconds"],
                     "writetime": _iso(
                         datetime.fromtimestamp(r["writetime_us"] / 1_000_000, tz=timezone.utc)

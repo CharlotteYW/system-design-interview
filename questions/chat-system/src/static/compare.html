@@ -35,7 +35,7 @@
     <ol class="note">
       <li>Click <b>Online cross server</b> on both sides.</li>
       <li>Send 6 messages to <code>lee-kim</code> on both sides. The right partition card grows a second bucket.</li>
-      <li>Select <code>kim-phone</code> in the mailbox, then click <b>Ack all</b>.</li>
+      <li>Select <code>kim-phone</code> in the mailbox, then click <b>Ack contiguous</b>.</li>
       <li>Click <b>Late ack</b>. The left cursor stays put. On the right, the upsert moves it back and the LWT keeps it.</li>
       <li>Disconnect <code>kim-phone</code>, send, then connect. Compare the <code>reads</code> in each connect response.</li>
     </ol>

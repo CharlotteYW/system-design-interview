@@ -257,7 +257,14 @@
       </label>
       <label>Body <input id="sendBody" value="hi" /></label>
       <label>Media key <input id="sendMedia" value="" placeholder="media/demo.jpg" /></label>
+      <p class="note">
+        Each send carries a new <code>clientMsgId</code> (a UUID) and this device's
+        <code>clientSeq</code> for this chat (1, 2, 3...). The server's <code>seq</code> is the chat order.
+      </p>
       <button id="btnSend">POST /v1/messages</button>
+      <button class="secondary" id="btnRetry">Retry last send (same clientMsgId)</button>
+      <button class="secondary" id="btnSwap">Send two, second arrives first</button>
+      <button class="secondary" id="btnCrash">Crash server mid-send</button>
       <pre id="sendTrace">Request and response appear here.</pre>
     </section>
 
@@ -285,8 +292,9 @@
           <option value="lwt">lwt — IF last_seq &lt; ? (Paxos)</option>
         </select>
       </label>
-      <button id="btnAckAll">Ack all (move cursors)</button>
+      <button id="btnAckAll">Ack contiguous (fill gaps first)</button>
       <button class="secondary" id="btnLateAck">Late ack (seq − 2)</button>
+      <button class="secondary" id="btnDropPush">Drop next push to this device</button>
       <pre id="ackTrace">Ack shows cursor before and after.</pre>
       <pre id="mailbox">[]</pre>
     </section>
@@ -378,7 +386,7 @@
       <h2>device_cursors</h2>
       <p class="note">
         Sender cursor moves on send. Recipient cursor moves only on
-        <code>POST /v1/ack</code> (use Ack all). Online push fills the mailbox;
+        <code>POST /v1/ack</code> (use Ack contiguous). Online push fills the mailbox;
         it does not move Kim's cursor. <code>GREATEST(old, new)</code> ignores a late ack.
       </p>
       <div class="scroll" id="cursorsBox"></div>
@@ -428,14 +436,33 @@
     <section class="card" data-watch="seq">
       <span class="tag redis">Redis</span>
       <h2>chat seq counters</h2>
-      <p class="note"><code>INCR chat:lee-kim:seq</code> on each send.</p>
+      <p class="note">
+        <code>INCR chat:lee-kim:seq</code> on each send. Lose the counter to mimic a Redis
+        failover. With the guard on, the next send rebuilds it from the highest stored seq.
+        With the guard off, Postgres rejects the reused seq (409), and Cassandra overwrites the old row.
+      </p>
+      <button class="secondary" id="btnLoseGuard">Lose counter (guard on)</button>
+      <button class="secondary" id="btnLoseNoGuard">Lose counter (guard off)</button>
       <pre id="seqBox">{}</pre>
+    </section>
+
+    <section class="card" data-watch="idem">
+      <span class="tag redis">Redis</span>
+      <h2>idempotency keys</h2>
+      <p class="note">
+        <code>idem:{clientId}:{clientMsgId}</code> holds the first answer for 24 hours.
+        A retry with the same id gets that answer back with <code>duplicate: true</code>. No second row is stored.
+      </p>
+      <pre id="idemBox">{}</pre>
     </section>
 
     <section class="card" data-watch="pubsub" style="grid-column: 1 / -1;">
       <span class="tag redis">Redis</span>
       <h2>Pub/Sub log</h2>
-      <p class="note">SUBSCRIBE on connect. PUBLISH on send. RECEIVE on the server that holds the recipient.</p>
+      <p class="note">SUBSCRIBE on connect. PUBLISH on send. RECEIVE on the server that holds the recipient.
+        Take Pub/Sub down: sends still store and return <code>livePush: failed</code>, and Kim catches up with Ack contiguous (gap fill) or a reconnect.</p>
+      <button class="secondary" id="btnPubsubDown">Pub/Sub down</button>
+      <button class="secondary" id="btnPubsubUp">Pub/Sub up</button>
       <pre id="pubsubBox">[]</pre>
     </section>
   </div>
@@ -568,7 +595,7 @@
       </dl>
       <p class="when">
         Try: Lee on A, Kim on B, send once. Watch messages (Postgres),
-        Pub/Sub RECEIVE on B, Kim mailbox, then Ack all to move Kim's cursor.
+        Pub/Sub RECEIVE on B, Kim mailbox, then Ack contiguous to move Kim's cursor.
       </p>
     </article>
 
@@ -776,16 +803,85 @@
       clientId: document.getElementById("connClient").value,
     }).then(refresh);
 
-    document.getElementById("btnSend").onclick = async () => {
-      await callApi("sendTrace", "POST", "/v1/messages", {
-        chatId: document.getElementById("sendChat").value,
-        message: document.getElementById("sendBody").value,
+    // One counter per device per chat, like a phone's own outbox numbering.
+    const clientSeqs = {};
+    let lastSendBody = null;
+
+    function nextSendBody(text) {
+      const clientId = document.getElementById("sendClient").value;
+      const chatId = document.getElementById("sendChat").value;
+      const key = clientId + "|" + chatId;
+      clientSeqs[key] = (clientSeqs[key] || 0) + 1;
+      return {
+        chatId,
+        message: text,
         mediaKey: document.getElementById("sendMedia").value,
         serverId: document.getElementById("sendServer").value,
-        clientId: document.getElementById("sendClient").value,
-      });
+        clientId,
+        clientMsgId: crypto.randomUUID(),
+        clientSeq: clientSeqs[key],
+      };
+    }
+
+    document.getElementById("btnSend").onclick = async () => {
+      lastSendBody = nextSendBody(document.getElementById("sendBody").value);
+      await callApi("sendTrace", "POST", "/v1/messages", lastSendBody);
       await refresh();
     };
+
+    document.getElementById("btnRetry").onclick = async () => {
+      if (!lastSendBody) {
+        document.getElementById("sendTrace").textContent = "Send a message first, then retry it.";
+        return;
+      }
+      await callApi("sendTrace", "POST", "/v1/messages", lastSendBody);
+      await refresh();
+    };
+
+    document.getElementById("btnSwap").onclick = async () => {
+      const first = nextSendBody("first");
+      const second = nextSendBody("second");
+      const r2 = await callApi(null, "POST", "/v1/messages", second);
+      const r1 = await callApi(null, "POST", "/v1/messages", first);
+      document.getElementById("sendTrace").textContent =
+        "Typed first: clientSeq " + first.clientSeq + ", sent second.\n"
+        + "Typed second: clientSeq " + second.clientSeq + ", sent first.\n\n"
+        + '"second" -> seq ' + r2.seq + ", outOfOrder " + r2.outOfOrder + "\n"
+        + '"first"  -> seq ' + r1.seq + ", outOfOrder " + r1.outOfOrder + "\n\n"
+        + "The server order (seq) wins. clientSeq lets the server see the swap.";
+      await refresh();
+    };
+
+    document.getElementById("btnCrash").onclick = async () => {
+      lastSendBody = nextSendBody(document.getElementById("sendBody").value + " (after crash)");
+      const r = await callApi(null, "POST", "/v1/lab/crash-mid-send", {
+        chatId: lastSendBody.chatId,
+        clientId: lastSendBody.clientId,
+        clientMsgId: lastSendBody.clientMsgId,
+      });
+      document.getElementById("sendTrace").textContent =
+        "POST /v1/lab/crash-mid-send -> " + JSON.stringify(r, null, 2) + "\n\n"
+        + "The server claimed the id and took seq " + r.seqTaken + ", then died before storing.\n"
+        + "seq " + r.seqTaken + " is now a hole. The phone got no reply.\n"
+        + "Click Retry now: 409, the claim is still pending.\n"
+        + "Wait " + r.pendingExpiresInSeconds + " s, then Retry: stored with a new seq.";
+      await refresh();
+    };
+
+    document.getElementById("btnPubsubDown").onclick = () =>
+      callApi("sendTrace", "POST", "/v1/lab/pubsub-down", { down: true }).then(refresh);
+    document.getElementById("btnPubsubUp").onclick = () =>
+      callApi("sendTrace", "POST", "/v1/lab/pubsub-down", { down: false }).then(refresh);
+
+    async function loseCounter(guard) {
+      const chatId = document.getElementById("sendChat").value;
+      await callApi("sendTrace", "POST", "/v1/lab/lose-seq-counter", { chatId, guard });
+      document.getElementById("sendTrace").textContent +=
+        "\n\nNow send once in " + chatId + " and read seqSeeded or the 409 in the response.";
+      await refresh();
+    }
+    document.getElementById("btnLoseGuard").onclick = () => loseCounter(true);
+    document.getElementById("btnLoseNoGuard").onclick = () => loseCounter(false);
 
     document.getElementById("btnCreateChat").onclick = async () => {
       const participants = [...document.querySelectorAll(".chatWith:checked")].map((el) => el.value);
@@ -868,17 +964,73 @@
       return body;
     }
 
+    // The cursor is the highest seq with no hole below it. A device with 7 and 9
+    // must not ack 9, or the drain would never send 8. A hole that the gap fill
+    // cannot close for HOLE_SKIP_MS is a seq that was taken and never stored.
+    const HOLE_SKIP_MS = 5000;
+    const holeSeenAt = {};
     document.getElementById("btnAckAll").onclick = async () => {
       const clientId = document.getElementById("mailClient").value;
       const mail = await (await fetch("/v1/lab/mailbox/" + clientId)).json();
-      let sent = 0;
+      const state = await (await fetch("/v1/lab/state")).json();
+      const byChat = {};
       for (const item of mail.items) {
         if (item.type !== "newMessage") continue;
-        const message = item.message;
-        await callApi("ackTrace", "POST", "/v1/ack", ackBody(clientId, message.chat_id, message.seq));
-        sent += 1;
+        (byChat[item.message.chat_id] = byChat[item.message.chat_id] || new Set()).add(item.message.seq);
       }
-      if (!sent) document.getElementById("ackTrace").textContent = "No newMessage in this mailbox to ack.";
+      const lines = [];
+      for (const [chatId, have] of Object.entries(byChat)) {
+        const row = (cursorRows(state) || []).find((r) => r.client_id === clientId && r.chat_id === chatId);
+        const cursor = row ? row.last_seq : 0;
+        const skipped = new Set();
+        const contiguous = () => {
+          let n = cursor;
+          while (have.has(n + 1) || skipped.has(n + 1)) n += 1;
+          return n;
+        };
+        let top = contiguous();
+        const highest = Math.max(...have);
+        lines.push(chatId + ": cursor " + cursor + ", holds " + [...have].sort((a, b) => a - b).join(","));
+        if (highest > top) {
+          lines.push("  gap after " + top + " -> GET /v1/chats/" + chatId + "/messages?afterSeq=" + top);
+          const fill = await (await fetch(
+            "/v1/chats/" + chatId + "/messages?clientId=" + clientId + "&afterSeq=" + top)).json();
+          for (const m of fill.messages) have.add(m.seq);
+          lines.push("  gap fill returned seq " + fill.messages.map((m) => m.seq).join(","));
+          top = contiguous();
+          while (top < highest) {
+            const hole = top + 1;
+            const key = chatId + ":" + hole;
+            holeSeenAt[key] = holeSeenAt[key] || Date.now();
+            const waited = Date.now() - holeSeenAt[key];
+            if (waited < HOLE_SKIP_MS) {
+              lines.push("  seq " + hole + " still missing for " + Math.round(waited / 1000)
+                + " s. Hold the cursor. Click again after " + HOLE_SKIP_MS / 1000 + " s.");
+              break;
+            }
+            skipped.add(hole);
+            lines.push("  seq " + hole + " missing for " + Math.round(waited / 1000) + " s -> skip it (taken, never stored)");
+            top = contiguous();
+          }
+        }
+        if (top > cursor) {
+          const r = await callApi(null, "POST", "/v1/ack", ackBody(clientId, chatId, top));
+          lines.push("  POST /v1/ack seq " + top + " -> cursor " + r.cursor.before + " -> " + r.cursor.after);
+        } else {
+          lines.push("  nothing new to ack");
+        }
+      }
+      document.getElementById("ackTrace").textContent =
+        lines.length ? lines.join("\n") : "No newMessage in this mailbox to ack.";
+      await refresh();
+    };
+
+    document.getElementById("btnDropPush").onclick = async () => {
+      const clientId = document.getElementById("mailClient").value;
+      await callApi("ackTrace", "POST", "/v1/lab/drop-next-push", { clientId });
+      document.getElementById("ackTrace").textContent +=
+        "\n\nSend twice to this device. The first push is dropped (see DROP in the Pub/Sub log)."
+        + "\nThen click Ack contiguous: it finds the hole and fills it.";
       await refresh();
     };
 
@@ -895,7 +1047,7 @@
       if (!row || row.last_seq < 3) {
         document.getElementById("ackTrace").textContent =
           "Need a cursor of 3 or more for " + clientId + " in " + chatId +
-          ". Send a few messages, then Ack all first.";
+          ". Send a few messages, then Ack contiguous first.";
         return;
       }
       await callApi("ackTrace", "POST", "/v1/ack", ackBody(clientId, chatId, row.last_seq - 2));
@@ -967,6 +1119,8 @@
       document.getElementById("subsBox").textContent = JSON.stringify(state.redis.subscriptions, null, 2);
       document.getElementById("presenceBox").textContent = JSON.stringify(state.redis.presence, null, 2);
       document.getElementById("seqBox").textContent = JSON.stringify(state.redis.chatSeq, null, 2);
+      document.getElementById("idemBox").textContent = JSON.stringify(state.redis.idempotencyKeys || {}, null, 2);
+      flashIfChanged("idem", state.redis.idempotencyKeys || {});
       document.getElementById("pubsubBox").textContent = JSON.stringify(state.redis.pubsubLog, null, 2);
 
       flashIfChanged("onlineA", mapA);
