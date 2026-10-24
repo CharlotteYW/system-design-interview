@@ -144,7 +144,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | Chapter | Question | Status |
 | --- | --- | --- |
 | 4 | Rate limiter | [Implemented](questions/rate-limiter/) |
-| 5 | Consistent hashing | listed |
+| 5 | Consistent hashing | [Implemented](core-concepts/consistent-hashing/) (as a core concept) |
 | 6 | Key-value store | [Implemented](questions/key-value-store/) |
 | 7 | Unique ID generator | [Implemented](questions/unique-id-generator/) |
 | 8 | URL shortener | [Implemented](questions/url-shortener/) |
