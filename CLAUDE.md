@@ -2,6 +2,8 @@
 
 This repo's workflow is defined in `AGENTS.md` and the rule files in `.cursor/rules/`. Claude Code does not load those files automatically, so read them first.
 
+@HANDOFF.md
+
 @AGENTS.md
 
 Before you start any question, concept, or re-practice:

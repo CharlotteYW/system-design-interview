@@ -6,6 +6,8 @@ Learn by designing a system in interview style, then implementing a **simplified
 
 ## Using another agent (Codex, Claude Code, and others)
 
+Start with [HANDOFF.md](HANDOFF.md). It has the current state, how a session runs, the learner's preferences, the setup traps, and the prompts to resume.
+
 The rules live in `.cursor/rules/*.mdc`. Cursor loads them by itself. Other agents must open and read every one, in numeric order, before they start. The files are plain Markdown and are binding. Claude Code reads `CLAUDE.md`, which imports this file.
 
 Progress is kept in the repo, not in any chat:

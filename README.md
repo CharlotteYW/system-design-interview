@@ -13,6 +13,8 @@ Sources to study from (do not copy write-ups into this repo):
 
 ## How to use this repo
 
+New chat, or a different tool (Codex, Claude Code)? Start with [HANDOFF.md](HANDOFF.md). It has the current state, how a session runs, and the prompts to resume.
+
 1. Skim [foundations](foundations/README.md) once so the vocabulary is in place.
 2. In Cursor, prompt a **question** (`rate limiter`, `url-shortener`) **or** a **concept** (`Networking Essentials`, `message queue`).
 3. Before that session starts, previous work is committed so `git status` is clean (see `.cursor/rules/04-commit-before-question.mdc`).
