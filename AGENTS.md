@@ -4,6 +4,18 @@ This repo is a personal study workspace for **software engineer system design in
 
 Learn by designing a system in interview style, then implementing a **simplified local version** (frontend + backend + database, Python/FastAPI + Docker Compose) with setup, integration, and functional tests.
 
+## Using another agent (Codex, Claude Code, and others)
+
+The rules live in `.cursor/rules/*.mdc`. Cursor loads them by itself. Other agents must open and read every one, in numeric order, before they start. The files are plain Markdown and are binding. Claude Code reads `CLAUDE.md`, which imports this file.
+
+Progress is kept in the repo, not in any chat:
+
+- The root `README.md` index shows each topic's status and the recommended order.
+- Each topic folder's `README.md` has its status, "What we implemented," and dated "Session notes."
+- Its `FAQ.md` has the dated "Session questions."
+
+Read those before you continue a topic. Chat history from another tool does not carry over.
+
 ## When the user names a question
 
 Follow `.cursor/rules/` in order:
