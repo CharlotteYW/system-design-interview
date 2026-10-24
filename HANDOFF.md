@@ -12,7 +12,7 @@ Last updated: 2026-10-24.
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 
-The recommended next question is **web-crawler**, then **uber**. The root `README.md` index is the source of truth for status. Update it when a topic changes state.
+The table above is a snapshot from the date at the top. The root `README.md` index is the source of truth for status and the recommended order. Check it before you pick the next topic. At the end of each session, update the index, this table, and the date.
 
 The two most recent questions are the best examples of a finished folder:
 
@@ -73,13 +73,14 @@ These come from the sessions so far. Follow them alongside the rules.
 
 ## Prompts to resume in a new chat
 
-Start with:
+Start every new chat with:
 
 > Read HANDOFF.md, AGENTS.md, and every file in .cursor/rules/ in numeric order, and follow them as binding instructions.
 
-Then add one of these:
+Then say what you want. Replace `<slug>` with the folder name, for example `web-crawler` or `chat-system`:
 
-- **Next question:** "Prepare the question web-crawler end to end."
-- **Re-practice:** "Re-practice chat-system. Read its README and FAQ session notes first."
-- **Resume mid-question:** "Continue uber. Step 2 is done. Start step 3 and list every Hello Interview deep dive first."
-- **Questions about a lab:** "Answer my questions about the youtube lab and record them in its FAQ."
+- **A new question:** "Prepare the question `<slug>` end to end."
+- **Re-practice:** "Re-practice `<slug>`. Read its README and FAQ session notes first."
+- **Resume mid-question:** "Continue `<slug>`. Step N is done. Start step N+1."
+- **Questions about a lab:** "Answer my questions about the `<slug>` lab and record them in its FAQ."
+- **Not sure what is next:** "Check the root README index and suggest the next topic."
