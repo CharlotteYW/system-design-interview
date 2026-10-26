@@ -6,9 +6,7 @@ QUESTION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=/dev/null
 source "${REPO_ROOT}/scripts/use-venv.sh"
 
-echo "Not implemented yet."
-echo "When this question is prepared, this script will run black-box scenarios against the running stack:"
-echo "  - happy path"
-echo "  - at least one failure / rejection path"
-echo "  - at least one scale-ish or concurrency edge"
-exit 1
+cd "${QUESTION_DIR}"
+export CRAWL_BASE_URL="${CRAWL_BASE_URL:-http://localhost:8400}"
+echo "Integration tests against ${CRAWL_BASE_URL} (about 4 minutes: real politeness gaps and backoff)"
+python -m pytest tests/test_scenarios.py -v -s -p no:cacheprovider

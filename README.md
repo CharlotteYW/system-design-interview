@@ -81,7 +81,7 @@ Recommended order. Prompt a question to fill a stub. URL shortener is **Implemen
 | 6 | News feed | [questions/news-feed](questions/news-feed/) | Hello Interview (FB News Feed) · Alex Xu Vol 1 Ch 11 · **Implemented** |
 | 7 | Chat system (WhatsApp) | [questions/chat-system](questions/chat-system/) | Hello Interview · Alex Xu Vol 1 Ch 12 · **Implemented** |
 | 8 | YouTube | [questions/youtube](questions/youtube/) | Hello Interview · Alex Xu Vol 1 Ch 14 · **Implemented** |
-| 9 | Web crawler | [questions/web-crawler](questions/web-crawler/) | Hello Interview · Alex Xu Vol 1 Ch 9 |
+| 9 | Web crawler | [questions/web-crawler](questions/web-crawler/) | Hello Interview · Alex Xu Vol 1 Ch 9 · **Implemented** |
 | 10 | Uber / ride matching | [questions/uber](questions/uber/) | Hello Interview · related: Alex Xu Vol 2 Proximity Service |
 
 ### Other prompts
@@ -126,7 +126,7 @@ Overlapping names share **one** future folder. Prompt any of these to add the fo
 | Uber | Hard | [Stub](questions/uber/) | |
 | Robinhood | Hard | listed | Related to Stock Exchange (Vol 2) |
 | Google Docs | Hard | listed | |
-| Web Crawler | Hard | [Stub](questions/web-crawler/) | |
+| Web Crawler | Hard | [Implemented](questions/web-crawler/) | ElasticMQ (SQS API) and DynamoDB Local stand in for SQS and DynamoDB |
 | Ad Click Aggregator | Hard | listed | Same as Vol 2 Ad Click Event Aggregation |
 | FB Post Search | Hard | listed | |
 | Payment System | Hard | listed | Same as Vol 2 Payment System |
@@ -148,7 +148,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 6 | Key-value store | [Implemented](questions/key-value-store/) |
 | 7 | Unique ID generator | [Implemented](questions/unique-id-generator/) |
 | 8 | URL shortener | [Implemented](questions/url-shortener/) |
-| 9 | Web crawler | [Stub](questions/web-crawler/) |
+| 9 | Web crawler | [Implemented](questions/web-crawler/) |
 | 10 | Notification system | [Implemented](questions/notification-system/) |
 | 11 | News feed | [Implemented](questions/news-feed/) |
 | 12 | Chat system | [Implemented](questions/chat-system/) |

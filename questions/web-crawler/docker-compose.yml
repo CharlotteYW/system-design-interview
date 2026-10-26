@@ -1,21 +1,124 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
+# Web crawler lab.
+#   app        :8400  control API + lab page
+#   scheduler         the only writer to the frontier (when it is on)
+#   fetcher    x2     6 worker threads each: robots, Redis politeness, GET, S3 html/
+#   parser            2 worker threads: text, Bloom + content_hashes, S3 text/, new links
+#   fakeweb           the fake web: kim.test, mirror.test, wiki.test, trap.test, flaky.test, dead.test, closed.test
+#   dynamodb          DynamoDB Local: urls, content_hashes, domains, race_urls
+#   elasticmq         SQS API: frontier, parse, frontier-dlq
+#   minio             S3 API: bucket "crawl" (html/, text/)
+#   redis             politeness keys, Bloom bits, lab stats
+#   postgres          only the race panel's ON CONFLICT variant
+x-env: &env
+  DDB_URL: http://dynamodb:8000
+  SQS_URL: http://elasticmq:9324
+  S3_URL: http://minio:9000
+  REDIS_URL: redis://redis:6379/0
+  DATABASE_URL: postgresql://app:app@postgres:5432/app
+  FAKEWEB_URL: http://fakeweb
+  DEFAULT_GAP_MS: "500"
+  VISIBILITY_TIMEOUT: "10"
+  BACKOFF_BASE: "1"
+  MAX_ATTEMPTS: "5"
+  FETCH_TIMEOUT: "2.0"
+  MAX_BYTES: "1000000"
+  BLOOM_BITS: "128"
+  BLOOM_K: "3"
+  FETCHER_PROCESSES: "2"
 
 services:
   app:
     build: .
     ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://app:app@postgres:5432/app
-      REDIS_URL: redis://redis:6379/0
+      - "8400:8000"
+    environment: *env
     depends_on:
-      postgres:
+      dynamodb:
+        condition: service_started
+      elasticmq:
+        condition: service_started
+      minio:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      fakeweb:
         condition: service_started
-    # profiles: ["not-implemented"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  scheduler:
+    build: .
+    command: ["python", "-m", "src.scheduler"]
+    environment: *env
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+  fetcher:
+    build: .
+    command: ["python", "-m", "src.fetcher"]
+    environment:
+      <<: *env
+      FETCHER_WORKERS: "6"
+    restart: unless-stopped
+    deploy:
+      replicas: 2
+    depends_on:
+      app:
+        condition: service_healthy
+
+  parser:
+    build: .
+    command: ["python", "-m", "src.parser"]
+    environment:
+      <<: *env
+      PARSER_WORKERS: "2"
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+
+  fakeweb:
+    build: .
+    command: ["uvicorn", "fakeweb.app:app", "--host", "0.0.0.0", "--port", "80"]
+    networks:
+      default:
+        aliases: [kim.test, mirror.test, wiki.test, trap.test, flaky.test, dead.test, closed.test]
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    command: ["server", "/data"]
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    volumes:
+      - crawl_minio:/data
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /minio/health/live HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && read -r line <&3 && [[ $$line == *200* ]]"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   postgres:
     image: postgres:16-alpine
@@ -23,16 +126,14 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
+    volumes:
+      - crawl_pg:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    # profiles: ["not-implemented"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
-  redis:
-    image: redis:7-alpine
-    # profiles: ["not-implemented"]
-
-# volumes:
-#   pgdata:
+volumes:
+  crawl_minio:
+  crawl_pg:

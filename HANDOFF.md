@@ -2,13 +2,13 @@
 
 Read this first in any new chat, in any tool (Cursor, Codex, Claude Code). It says where the study is, how a session runs, and what the learner expects. The binding rules are in `.cursor/rules/` (read every file, `00-` to `21-`). This file does not replace them.
 
-Last updated: 2026-10-24.
+Last updated: 2026-10-25.
 
 ## Where the study is
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password | web-crawler, uber (stubs) |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler | uber (stub) |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 
@@ -18,6 +18,7 @@ The two most recent questions are the best examples of a finished folder:
 
 - `questions/chat-system/`: two message-store designs side by side (Postgres and Cassandra), ordering and failure deep dives, and long FAQ session questions.
 - `questions/youtube/`: a full five-step design, a lab with MinIO, ffmpeg workers, and nginx CDN edges, and a call-by-call flow table.
+- `questions/web-crawler/`: DynamoDB Local, ElasticMQ (an SQS-compatible queue), MinIO, and Redis, with a fake local web; a scheduler on/off comparison, a Bloom filter variant panel, and a two-parser race panel.
 
 ## How a question session runs
 
@@ -60,8 +61,9 @@ These come from the sessions so far. Follow them alongside the rules.
 ## Environment and traps
 
 - **Docker Desktop must be running.** Host scripts use the repo venv `.venv` through `scripts/use-venv.sh`. Never use the system Python.
-- **Run one lab at a time.** Most labs bind port 8000. chat-system uses 8000 and 8001. youtube uses 8300 to 8305 and 9000. Run the other lab's `scripts/stop.sh` first. `stop.sh` keeps the volumes.
+- **Run one lab at a time.** Most labs bind port 8000. chat-system uses 8000 and 8001. youtube uses 8300 to 8305 and 9000. web-crawler uses 8400. Run the other lab's `scripts/stop.sh` first. `stop.sh` keeps the volumes.
 - **`minio/minio` is no longer on Docker Hub.** Use `cgr.dev/chainguard/minio` (see `questions/youtube/docker-compose.yml`). That image has no curl, wget, or grep, so its healthcheck uses bash `/dev/tcp`. MinIO bucket events need `_<ID>` on every env var, for example `MINIO_NOTIFY_REDIS_ADDRESS_YT`. Events reach Redis as a JSON array.
+- **AWS stand-ins that work offline:** `amazon/dynamodb-local` (run with `-sharedDb -inMemory`, so tables reset on stop) and `softwaremill/elasticmq-native` (the SQS API, including `ChangeMessageVisibility`). boto3 talks to both with `endpoint_url` and dummy keys.
 - **Cassandra (chat-system design 2) needs about a minute to start.** `setup.sh` waits for it.
 - **Hello Interview pages:** fetch the problem breakdown, read its requirements, below-the-line list, and "Deep Dives" headings, then cite it. Never paste its text.
 
