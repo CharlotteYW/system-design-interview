@@ -8,11 +8,12 @@ Last updated: 2026-10-25.
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler | uber (stub) |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler | Every other name in the root README learning path is a stub. Next: `search-autocomplete` |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
+| Patterns (`patterns/`) | 8 Hello Interview patterns, each question mapped to one primary | none |
 
-The table above is a snapshot from the date at the top. The root `README.md` index is the source of truth for status and the recommended order. Check it before you pick the next topic. At the end of each session, update the index, this table, and the date.
+The table above is a snapshot from the date at the top. The root `README.md` **learning path** is the source of truth for status and the practice order. Check it before you pick the next topic. At the end of each session, update the index, this table, and the date.
 
 The two most recent questions are the best examples of a finished folder:
 
