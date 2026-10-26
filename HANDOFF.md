@@ -8,7 +8,7 @@ Last updated: 2026-10-25.
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler | Every other name in the root README learning path is a stub. Next: `search-autocomplete` |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete | Every other name in the root README learning path is a stub. Next: `google-drive` |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 | Patterns (`patterns/`) | 8 Hello Interview patterns, each question mapped to one primary | none |
@@ -62,7 +62,7 @@ These come from the sessions so far. Follow them alongside the rules.
 ## Environment and traps
 
 - **Docker Desktop must be running.** Host scripts use the repo venv `.venv` through `scripts/use-venv.sh`. Never use the system Python.
-- **Run one lab at a time.** Most labs bind port 8000. chat-system uses 8000 and 8001. youtube uses 8300 to 8305 and 9000. web-crawler uses 8400. Run the other lab's `scripts/stop.sh` first. `stop.sh` keeps the volumes.
+- **Run one lab at a time.** Most labs bind port 8000. chat-system uses 8000 and 8001. youtube uses 8300 to 8305 and 9000. web-crawler uses 8400. search-autocomplete uses 8410. Run the other lab's `scripts/stop.sh` first. `stop.sh` keeps the volumes.
 - **`minio/minio` is no longer on Docker Hub.** Use `cgr.dev/chainguard/minio` (see `questions/youtube/docker-compose.yml`). That image has no curl, wget, or grep, so its healthcheck uses bash `/dev/tcp`. MinIO bucket events need `_<ID>` on every env var, for example `MINIO_NOTIFY_REDIS_ADDRESS_YT`. Events reach Redis as a JSON array.
 - **AWS stand-ins that work offline:** `amazon/dynamodb-local` (run with `-sharedDb -inMemory`, so tables reset on stop) and `softwaremill/elasticmq-native` (the SQS API, including `ChangeMessageVisibility`). boto3 talks to both with `endpoint_url` and dummy keys.
 - **Cassandra (chat-system design 2) needs about a minute to start.** `setup.sh` waits for it.

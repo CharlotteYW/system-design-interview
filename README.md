@@ -97,7 +97,7 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 
 | # | Question | The new idea | Why it is here | Status |
 | --- | --- | --- | --- | --- |
-| 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | The last small Volume 1 chapter. It uses counts | Stub |
+| 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | The last small Volume 1 chapter. It uses counts | Implemented |
 | 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | The last Volume 1 chapter. Upload skills come from YouTube. Dropbox is this question | Stub |
 | 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Volume 2 starts here. Uber needs this index | Stub |
 | 13 | [Nearby friends](questions/nearby-friends/) | Location plus a friend list | Adds the follow graph from the news feed | Stub |
@@ -204,7 +204,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 10 | Notification system | [Implemented](questions/notification-system/) |
 | 11 | News feed | [Implemented](questions/news-feed/) |
 | 12 | Chat system | [Implemented](questions/chat-system/) |
-| 13 | Search autocomplete | [Stub](questions/search-autocomplete/) |
+| 13 | Search autocomplete | [Implemented](questions/search-autocomplete/) | Trie and hash map in memory. Today's counts fold in on a timer |
 | 14 | YouTube | [Implemented](questions/youtube/) |
 | 15 | Google Drive | [Stub](questions/google-drive/) |
 

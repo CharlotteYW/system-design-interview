@@ -1,20 +1,19 @@
 # Components — Search Autocomplete
 
-Each row is a piece you would name on the whiteboard. Fill definition and responsibility; drop unused rows.
-
 | Component | Definition | Functionality in this design |
 | --- | --- | --- |
-| Client | App or caller of the API | Sends requests; displays results |
-| Load balancer | Distributes traffic across service instances | TBD |
-| API / application service | Stateless request handlers | TBD |
-| Primary database | Source of truth for core entities | TBD |
-| Cache | Fast memory store for hot reads | TBD |
-| Message queue | Async buffer between producers and consumers | TBD |
-| Worker | Background processor | TBD |
-| Object store | Blob storage for large files | TBD |
-| CDN | Edge cache for static content | TBD |
+| Client | Kim's browser | Waits 0.5 s after the last key. Skips `GET` when the cached shorter prefix still has 5 matches. Calls `POST /v1/searches` on Enter |
+| Load balancer | Spreads calls across gateway machines | A suggestion call can land on any machine. No session stickiness |
+| API gateway | The HTTP front | Routes `GET` to the query service. Appends `POST` to `searches` |
+| Query service | The read path | Loads `suggestions` and builds a trie from the same rows. A request can use the map or the trie. Either way it returns a stored list and does not sort |
+| Daily builder | The write path for the snapshot | Once a day, counts `searches` and publishes a new `suggestions` set |
+| Postgres `searches` | The durable log | One row per finished search. About 2,300 inserts a second at the peak |
+| Postgres `suggestions` | The published snapshot | Prefix, position, text, frequency. Query machines load it. A `GET` does not read it |
 
 ## Why these pieces
 
-- TBD: which components are load-bearing vs optional for the interview
-- TBD: what you would add only in a deep dive
+- The read is about 48,000 requests a second. The sort cannot run on that path.
+- The log is about 2,300 rows a second at the peak. One table can append them.
+- A failed build leaves yesterday's snapshot in place, so the dropdown stays up.
+- A queue is not on this path. The log is the buffer. The builder reads it once a day.
+- Redis, a trie layout, and a last-hour weight are later. The builder is where the weight would be added.

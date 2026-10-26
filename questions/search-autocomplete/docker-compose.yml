@@ -1,21 +1,22 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
-
+# Search autocomplete lab.
+#   app      :8410  API + page. Trie and hash map live in memory.
+#   postgres        yesterday's frequency, today's folded counts, the search log
 services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8410:8000"
     environment:
       DATABASE_URL: postgresql://app:app@postgres:5432/app
-      REDIS_URL: redis://redis:6379/0
+      FOLD_SECONDS: "20"
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_started
-    # profiles: ["not-implemented"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
 
   postgres:
     image: postgres:16-alpine
@@ -23,16 +24,13 @@ services:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
       POSTGRES_DB: app
+    volumes:
+      - ac_pg:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U app -d app"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    # profiles: ["not-implemented"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
-  redis:
-    image: redis:7-alpine
-    # profiles: ["not-implemented"]
-
-# volumes:
-#   pgdata:
+volumes:
+  ac_pg:

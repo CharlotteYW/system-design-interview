@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Search autocomplete lab</title>
+<style>
+  :root { --bg:#0f1419; --card:#182029; --line:#2a3441; --text:#d7dde4; --dim:#8a96a3; --ok:#3fb950; --warn:#d29922; --acc:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); }
+  h1 { font-size:18px; margin:0 0 4px; }
+  h2 { font-size:14px; margin:0 0 8px; }
+  main { display:grid; grid-template-columns:1.1fr 1fr; gap:12px; padding:12px 20px 32px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; min-width:0; }
+  .wide { grid-column:1 / -1; }
+  input { background:#0d1117; color:var(--text); border:1px solid #3d4550; border-radius:6px; padding:8px 10px; font-size:16px; width:100%; }
+  button { background:#21262d; color:var(--text); border:1px solid #3d4550; border-radius:6px; padding:6px 10px; cursor:pointer; }
+  button.primary { background:#238636; border-color:#2ea043; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px; }
+  .dim { color:var(--dim); }
+  .ok { color:var(--ok); } .warn { color:var(--warn); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th, td { text-align:left; padding:3px 6px; border-bottom:1px solid var(--line); }
+  th { color:var(--dim); font-weight:500; }
+  .scroll { max-height:280px; overflow:auto; }
+  pre { margin:8px 0 0; background:#0d1117; border:1px solid var(--line); border-radius:6px; padding:8px; font-size:11px; white-space:pre-wrap; word-break:break-all; max-height:180px; overflow:auto; }
+  .sug { font-size:16px; padding:4px 0; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:10px; background:#30363d; }
+  @media (max-width:900px) { main { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Search autocomplete lab</h1>
+  <div class="dim">Batch layer is yesterday's frequency. The speed layer adds today's counts on a fold. The design folds every 2 minutes. This lab folds every <span id="foldSec">20</span> seconds so you can watch. A GET reads memory. It does not wait for a fold.</div>
+</header>
+<main>
+  <section class="card">
+    <h2>1. Type a prefix</h2>
+    <input id="q" placeholder="type ki, then pause" autocomplete="off">
+    <div class="row">
+      <span id="decision" class="pill">idle</span>
+      <span class="dim" id="meta"></span>
+    </div>
+    <div id="list"></div>
+    <h2 style="margin-top:14px">2. Record a finished search</h2>
+    <div class="row">
+      <button class="primary" onclick="record(1)">POST one search</button>
+      <button onclick="record(4500)">Record kiosk 4500 times</button>
+      <button onclick="call('POST','/v1/lab/fold')">Fold now</button>
+      <button onclick="call('POST','/v1/lab/daily-build')">Daily build</button>
+      <button onclick="call('POST','/v1/lab/reset')">Reset</button>
+    </div>
+    <div class="dim" id="counts"></div>
+    <h2 style="margin-top:14px">API trace</h2>
+    <div id="trace"></div>
+  </section>
+  <section class="card">
+    <h2>3. Hash map and trie for this prefix</h2>
+    <div class="dim">Same top 10. The map stores the prefix as a key. The trie walks one character at a time. Both lists were stored at the last fold.</div>
+    <div id="layouts"></div>
+  </section>
+  <section class="card">
+    <h2>4. Yesterday, folded today, still pending</h2>
+    <div class="scroll"><table id="freq"></table></div>
+  </section>
+  <section class="card">
+    <h2>5. Prefixes in memory</h2>
+    <div class="dim" id="prefixMeta"></div>
+    <div class="scroll"><table id="prefixes"></table></div>
+  </section>
+  <section class="card wide">
+    <h2>6. Search log</h2>
+    <div class="dim">Pending rows are recorded and not folded. Folded rows are already inside folded today.</div>
+    <table id="log"></table>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const cache = {};
+let timer = null;
+let lastSnapshot = null;
+
+function esc(s) { return String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+function trace(method, path, body, status, resp) {
+  const el = document.createElement("div");
+  el.innerHTML = `<div><b>${method} ${esc(path)}</b> -> ${status}</div>` +
+    (body ? `<pre>${esc(JSON.stringify(body))}</pre>` : "") +
+    `<pre>${esc(JSON.stringify(resp, null, 2))}</pre>`;
+  $("trace").prepend(el);
+  while ($("trace").children.length > 6) $("trace").lastChild.remove();
+}
+
+async function call(method, path, body) {
+  const res = await fetch(path, { method, headers: body ? {"content-type":"application/json"} : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json();
+  trace(method, path, body, res.status, data);
+  refresh();
+  return data;
+}
+
+function showList(rows, note) {
+  $("list").innerHTML = rows.map(r => `<div class="sug">${esc(r.text)} <span class="dim">${r.frequency}</span></div>`).join("") || `<div class="dim">${note || "no suggestion"}</div>`;
+}
+
+function renderLayouts(data) {
+  const map = (data.hashMap && data.hashMap.stored) || [];
+  const steps = (data.trie && data.trie.steps) || [];
+  $("layouts").innerHTML =
+    `<div class="dim">${data.layoutsAgree ? "The two layouts agree." : "The layouts differ."}</div>` +
+    `<h2 style="margin-top:8px">Hash map key "${esc(data.hashMap.prefix)}"</h2>` +
+    map.map(r => `<div>${esc(r.text)} <span class="dim">${r.frequency}</span></div>`).join("") +
+    `<h2 style="margin-top:8px">Trie walk</h2>` +
+    steps.map(s => `<div><b>${esc(s.char)}</b> <span class="dim">${(s.stored||[]).slice(0,5).map(r => r.text).join(", ")}</span></div>`).join("");
+}
+
+async function suggest(prefix) {
+  const parent = prefix.slice(0, -1);
+  const prev = cache[parent];
+  if (prev && prev.snapshot === lastSnapshot) {
+    const matched = prev.suggestions.filter(r => r.text.startsWith(prefix));
+    const full = prev.suggestions.length >= (prev.limit || 5);
+    if (!full || matched.length >= (prev.limit || 5)) {
+      $("decision").textContent = "browser skipped the call";
+      $("decision").className = "pill ok";
+      showList(matched.slice(0, 5), "empty after a short list");
+      trace("SKIP", `/v1/suggestions?q=${prefix}`, null, "cached", { from: parent, kept: matched.map(r => r.text) });
+      return;
+    }
+  }
+  const path = `/v1/suggestions?q=${encodeURIComponent(prefix)}&limit=5`;
+  const res = await fetch(path);
+  const data = await res.json();
+  trace("GET", path, null, res.status, { suggestions: data.suggestions, snapshot: data.snapshot, layoutsAgree: data.layoutsAgree });
+  cache[prefix] = { suggestions: data.suggestions, snapshot: data.snapshot, limit: 5 };
+  lastSnapshot = data.snapshot;
+  $("decision").textContent = "called the server";
+  $("decision").className = "pill";
+  showList(data.suggestions);
+  renderLayouts(data);
+}
+
+$("q").addEventListener("input", () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => suggest($("q").value.trim().toLowerCase()), 500);
+});
+
+async function record(count) {
+  const query = count > 1 ? "kiosk" : ($("q").value.trim() || "kitchen");
+  await call("POST", "/v1/searches", { query, count });
+}
+
+async function refresh() {
+  const q = $("q").value.trim().toLowerCase();
+  const res = await fetch("/v1/lab/state?q=" + encodeURIComponent(q));
+  if (!res.ok) return;
+  const s = await res.json();
+  $("foldSec").textContent = s.foldSeconds;
+  const wait = Math.max(0, Math.round(s.nextFold - Date.now() / 1000));
+  $("meta").textContent = `snapshot ${s.snapshot} · next fold ${wait}s · ${s.prefixCount} prefixes · ${s.queryCount} queries`;
+  $("counts").textContent = `pending rows ${s.pendingRows} · folded-today total ${s.foldedToday}`;
+  $("prefixMeta").textContent = `Showing prefixes that start with "${q}". ${s.prefixCount} prefixes are in memory.`;
+  $("freq").innerHTML = "<tr><th>query</th><th>yesterday</th><th>folded today</th><th>merged</th></tr>" +
+    s.matching.map(r => `<tr><td>${esc(r.query)}</td><td>${r.yesterday}</td><td>${r.foldedToday}</td><td>${r.merged}</td></tr>`).join("");
+  $("prefixes").innerHTML = "<tr><th>prefix</th><th>top stored query</th></tr>" +
+    s.prefixes.map(p => `<tr><td>${esc(p.prefix)}</td><td>${esc(p.top)}</td></tr>`).join("");
+  $("log").innerHTML = "<tr><th>pending</th><th>count</th></tr>" +
+    (s.pending.map(p => `<tr><td>${esc(p.query)}</td><td>${p.count}</td></tr>`).join("") || `<tr><td class="dim" colspan="2">nothing waiting for the fold</td></tr>`) +
+    "<tr><th>recent row</th><th>folded</th></tr>" +
+    s.recent.map(r => `<tr><td>${esc(r.query)}</td><td>${r.folded ? "yes" : "no"}</td></tr>`).join("");
+  if (s.hashMap) renderLayouts(s);
+}
+setInterval(refresh, 2000);
+refresh();
+</script>
+</body>
+</html>
