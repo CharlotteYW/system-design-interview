@@ -1,0 +1,6 @@
+.certs
+.local-ca
+__pycache__
+.pytest_cache
+tests
+*.md

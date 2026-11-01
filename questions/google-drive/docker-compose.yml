@@ -1,38 +1,113 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
-
+name: google-drive-study
 services:
+  gateway:
+    image: nginx:1.27-alpine
+    ports: ["8420:8420"]
+    volumes:
+      - ./gateway.conf:/etc/nginx/nginx.conf:ro
+      - ./.certs:/certs:ro
+    depends_on:
+      app: {condition: service_healthy}
   app:
     build: .
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://app:app@postgres:5432/app
-      REDIS_URL: redis://redis:6379/0
+    environment: &env
+      DATABASE_URL: postgresql://app:app@postgres:5432/drive?sslmode=verify-full&sslrootcert=/certs/ca.crt
+      REDIS_URL: rediss://redis:6379/0
+      TLS_CA: /certs/ca.crt
+      INTERNAL_KEY: local-study-internal-key
+      SIGNING_KEY: local-study-signing-key
+      STORAGE_MASTER_KEY: local-study-storage-key-not-for-production
+      EDGE_MASTER_KEY: local-study-edge-key-not-for-production
+      URL_TTL: "30"
+      LEASE_TTL: "180"
+    volumes: ["./.certs:/certs:ro"]
     depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    # profiles: ["not-implemented"]
-
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      storage: {condition: service_healthy}
+      edge: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl,urllib.request; urllib.request.urlopen('https://localhost:8000/healthz',context=ssl.create_default_context(cafile='/certs/ca.crt'))"]
+      interval: 3s
+      timeout: 8s
+      retries: 40
+  worker:
+    build: .
+    environment: *env
+    command: ["python", "-m", "src.jobs"]
+    volumes: ["./.certs:/certs:ro"]
+    restart: unless-stopped
+    depends_on:
+      app: {condition: service_healthy}
+  storage:
+    build: .
+    environment: *env
+    command: ["uvicorn", "src.storage:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--ssl-keyfile", "/certs/private.key", "--ssl-certfile", "/certs/public.crt"]
+    ports: ["8421:8000"]
+    volumes: ["./.certs:/certs:ro"]
+    depends_on:
+      minio: {condition: service_started}
+      redis: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import ssl,urllib.request; urllib.request.urlopen('https://localhost:8000/healthz',context=ssl.create_default_context(cafile='/certs/ca.crt'))"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+  edge:
+    build: .
+    environment: *env
+    command: ["uvicorn", "src.edge:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log", "--ssl-keyfile", "/certs/private.key", "--ssl-certfile", "/certs/public.crt"]
+    ports: ["8422:8000"]
+    volumes:
+      - ./.certs:/certs:ro
+      - edge_cache:/cache
+    depends_on:
+      storage: {condition: service_healthy}
+  minio:
+    image: cgr.dev/chainguard/minio:latest
+    user: "0:0"
+    command: ["server", "/data", "--certs-dir", "/certs"]
+    environment:
+      MINIO_ROOT_USER: lab-storage
+      MINIO_ROOT_PASSWORD: local-study-minio-password
+    volumes:
+      - ./.certs:/certs:ro
+      - minio_data:/data
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
-      POSTGRES_DB: app
+      POSTGRES_DB: drive
+    command:
+      - sh
+      - -c
+      - |
+        cp /certs/public.crt /tmp/drive.crt
+        cp /certs/private.key /tmp/drive.key
+        chown postgres:postgres /tmp/drive.key /tmp/drive.crt
+        chmod 600 /tmp/drive.key
+        exec docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=/tmp/drive.crt -c ssl_key_file=/tmp/drive.key
+    volumes:
+      - ./.certs:/certs:ro
+      - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    # profiles: ["not-implemented"]
-
+      test: ["CMD-SHELL", "pg_isready -U app -d drive"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
   redis:
     image: redis:7-alpine
-    # profiles: ["not-implemented"]
-
-# volumes:
-#   pgdata:
+    user: "0:0"
+    entrypoint: ["redis-server"]
+    command: ["--port", "0", "--tls-port", "6379", "--tls-cert-file", "/certs/public.crt", "--tls-key-file", "/certs/private.key", "--tls-ca-cert-file", "/certs/ca.crt", "--tls-auth-clients", "no"]
+    volumes: ["./.certs:/certs:ro"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/certs/ca.crt", "-h", "redis", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  pg_data:
+  minio_data:
+  edge_cache:

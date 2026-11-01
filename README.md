@@ -98,7 +98,7 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 | # | Question | The new idea | Why it is here | Status |
 | --- | --- | --- | --- | --- |
 | 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | The last small Volume 1 chapter. It uses counts | Implemented |
-| 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | The last Volume 1 chapter. Upload skills come from YouTube. Dropbox is this question | Stub |
+| 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | The last Volume 1 chapter. Upload skills come from YouTube. Dropbox is this question | Implemented |
 | 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Volume 2 starts here. Uber needs this index | Stub |
 | 13 | [Nearby friends](questions/nearby-friends/) | Location plus a friend list | Adds the follow graph from the news feed | Stub |
 | 14 | [Uber](questions/uber/) | Match one rider to one driver | The trip is new. The location index already exists | Stub |
@@ -155,7 +155,7 @@ Overlapping names share **one** folder. Every name below has a folder. Prompt th
 | Question | Difficulty | Status | Notes |
 | --- | --- | --- | --- |
 | Bitly | Easy | [Implemented](questions/url-shortener/) | Same as URL shortener |
-| Dropbox | Easy | [Stub](questions/google-drive/) | Same question as Google Drive (Vol 1 Ch 15) |
+| Dropbox | Easy | [Implemented](questions/google-drive/) | Same question as Google Drive (Vol 1 Ch 15) |
 | Yelp | Easy | [Stub](questions/yelp/) | Related to Proximity Service (Vol 2) |
 | Local Delivery Service | Easy | [Stub](questions/local-delivery/) | |
 | Ticketmaster | Medium | [Stub](questions/ticketmaster/) | |
@@ -206,7 +206,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 | 12 | Chat system | [Implemented](questions/chat-system/) |
 | 13 | Search autocomplete | [Implemented](questions/search-autocomplete/) | Trie and hash map in memory. Today's counts fold in on a timer |
 | 14 | YouTube | [Implemented](questions/youtube/) |
-| 15 | Google Drive | [Stub](questions/google-drive/) |
+| 15 | Google Drive | [Implemented](questions/google-drive/) |
 
 ### Alex Xu Vol 2
 

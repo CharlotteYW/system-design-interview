@@ -2,13 +2,13 @@
 
 Read this first in any new chat, in any tool (Cursor, Codex, Claude Code). It says where the study is, how a session runs, and what the learner expects. The binding rules are in `.cursor/rules/` (read every file, `00-` to `21-`). This file does not replace them.
 
-Last updated: 2026-10-25.
+Last updated: 2026-11-01.
 
 ## Where the study is
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete | Every other name in the root README learning path is a stub. Next: `google-drive` |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete, google-drive | Every other name in the root README learning path is a stub. Next: `proximity-service` |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 | Patterns (`patterns/`) | 8 Hello Interview patterns, each question mapped to one primary | none |
@@ -87,3 +87,13 @@ Then say what you want. Replace `<slug>` with the folder name, for example `web-
 - **Resume mid-question:** "Continue `<slug>`. Step N is done. Start step N+1."
 - **Questions about a lab:** "Answer my questions about the `<slug>` lab and record them in its FAQ."
 - **Not sure what is next:** "Check the root README index and suggest the next topic."
+
+## Most recent completed session — Google Drive, 2026-11-01
+
+All five design steps are complete. The full-stack lab is implemented. Setup, 12 integration scenarios, and 4 functional checks pass. Browser upload/download, Kim sharing and replay, and CDC comparison were checked. Read questions/google-drive/README.md section 6 for limits and ports. Region replication is simulated in one database.
+
+The learner closed the chapter after end-of-session Q&A on 2026-11-01. Answers are recorded in FAQ and README. The next recommended topic is proximity-service. Run git status before a new topic and follow rule 04.
+
+Google Drive follow-up fixes: inspector cards now update in place, preserving expanded rows. Local TLS uses a host-only CA signing key and separate server certificate. The current user Keychain trusts only the exact non-CA server certificate for SSL; browser and ordinary macOS HTTPS checks passed. Run trust-local-cert.sh after server certificate renewal. Do not replace this with hostname-scoped macOS CA trust: Chromium ignores that policy constraint. Practice data was preserved.
+
+Chapter closure: scripts/stop.sh completed successfully on 2026-11-01. All Google Drive containers are stopped and named data volumes are preserved. End-of-session Q&A is complete. Next recommended question: proximity-service.
