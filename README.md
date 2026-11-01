@@ -92,13 +92,13 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 | 7 | [Chat system](questions/chat-system/) | Order, and live delivery | Implemented |
 | 8 | [Web crawler](questions/web-crawler/) | A polite pipeline | Implemented |
 | 9 | [YouTube](questions/youtube/) | A large upload, transcode, and a CDN | Implemented |
+| 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | Implemented |
+| 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | Implemented |
 
 ### Next
 
 | # | Question | The new idea | Why it is here | Status |
 | --- | --- | --- | --- | --- |
-| 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | The last small Volume 1 chapter. It uses counts | Implemented |
-| 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | The last Volume 1 chapter. Upload skills come from YouTube. Dropbox is this question | Implemented |
 | 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Volume 2 starts here. Uber needs this index | Stub |
 | 13 | [Nearby friends](questions/nearby-friends/) | Location plus a friend list | Adds the follow graph from the news feed | Stub |
 | 14 | [Uber](questions/uber/) | Match one rider to one driver | The trip is new. The location index already exists | Stub |
