@@ -105,3 +105,7 @@ The learner finished the five-step interview and end-of-session questions. The l
 Setup, eight integration scenarios, and three functional tests passed. Browser verification covered the core and advanced search results, profile lookup, and the table inspectors. The stop script removed the containers and preserved proximity-service_pgdata. Start the lab again with questions/proximity-service/scripts/setup.sh.
 
 Next in the learning path is Nearby Friends. Start with the requirements prompt. The change from Proximity Service is that user locations move and visibility depends on friendship and sharing settings.
+
+## Active session — Nearby Friends, 2026-11-08
+
+Step 1 prompt is recorded in the question README and FAQ. The learner will define functional requirements, quality targets, and exclusions. Proximity Service is closed and pushed. No Nearby Friends architecture or lab has been selected.

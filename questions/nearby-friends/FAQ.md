@@ -4,6 +4,8 @@ Practice these out loud. Add questions you actually got stuck on. Same five step
 
 ## 1. Requirements and design scope
 
+The 2026-11-08 prompt asks how Lee can see nearby friends as they move and choose whether to share their location. The learner will define the required actions, quality targets, and exclusions.
+
 **Q: What are the must-have functional requirements?**  
 A: TBD
 

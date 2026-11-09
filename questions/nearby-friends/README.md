@@ -1,7 +1,8 @@
 # Nearby Friends
 
 **Status:** Stub  
-**Sources:** Alex Xu Vol 2 Ch 2  
+**Sources:** Alex Xu, System Design Interview, Vol. 2, Ch. 2. [Author's chapter list](https://blog.bytebytego.com/p/system-design-interview-books-volume).
+
 **Slug:** `nearby-friends`
 
 Practice in the five-step interview pattern. Keep notes original; link to Hello Interview / cite Alex Xu instead of copying write-ups.
@@ -10,7 +11,11 @@ Practice in the five-step interview pattern. Keep notes original; link to Hello 
 
 ### Problem
 
-One or two sentences: what are we designing, and for whom?
+Design a feature that lets Lee see which friends are within 3 km while those friends move around and choose whether to share their location.
+
+### 2026-11-08 — Step 1 prompt
+
+State the user-facing actions, the quality targets, and what stays outside the interview. Estimate users, active location sharers, location update frequency, and how quickly nearby results should reflect movement. The learner's answer will define the scope before we pick components.
 
 ### Functional requirements
 
