@@ -2,13 +2,13 @@
 
 Read this first in any new chat, in any tool (Cursor, Codex, Claude Code). It says where the study is, how a session runs, and what the learner expects. The binding rules are in `.cursor/rules/` (read every file, `00-` to `21-`). This file does not replace them.
 
-Last updated: 2026-11-01.
+Last updated: 2026-11-08.
 
 ## Where the study is
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete, google-drive | Every other name in the root README learning path is a stub. Next: `proximity-service` |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete, google-drive, proximity-service | Every other name in the root README learning path is a stub. Next: `nearby-friends` |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 | Patterns (`patterns/`) | 8 Hello Interview patterns, each question mapped to one primary | none |
@@ -97,3 +97,11 @@ The learner closed the chapter after end-of-session Q&A on 2026-11-01. Answers a
 Google Drive follow-up fixes: inspector cards now update in place, preserving expanded rows. Local TLS uses a host-only CA signing key and separate server certificate. The current user Keychain trusts only the exact non-CA server certificate for SSL; browser and ordinary macOS HTTPS checks passed. Run trust-local-cert.sh after server certificate renewal. Do not replace this with hostname-scoped macOS CA trust: Chromium ignores that policy constraint. Practice data was preserved.
 
 Chapter closure: scripts/stop.sh completed successfully on 2026-11-01. All Google Drive containers are stopped and named data volumes are preserved. End-of-session Q&A is complete. Next recommended question: proximity-service.
+
+## Most recent completed session — Proximity Service, 2026-11-08
+
+The learner finished the five-step interview and end-of-session questions. The local lab runs nginx, two FastAPI services, and PostgreSQL with PostGIS. The core page compares PostGIS, Geohash, and full scan. The advanced page compares Quadtree, k-d tree, S2, and H3 with PostGIS. S2 and H3 use business_cell_keys, which Business Service maintains in the registration transaction. Read the question README and FAQ for the index storage examples and chooser.
+
+Setup, eight integration scenarios, and three functional tests passed. Browser verification covered the core and advanced search results, profile lookup, and the table inspectors. The stop script removed the containers and preserved proximity-service_pgdata. Start the lab again with questions/proximity-service/scripts/setup.sh.
+
+Next in the learning path is Nearby Friends. Start with the requirements prompt. The change from Proximity Service is that user locations move and visibility depends on friendship and sharing settings.

@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Proximity Service Lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">SYSTEM DESIGN STUDY LAB</p>
+      <h1>Proximity Service</h1>
+      <p>Search the same area three ways, open a business profile, and retry a registration safely.</p>
+      <div class="pipeline" aria-label="Request path">
+        <span>Browser</span><span>→</span><span>API gateway</span><span>→</span>
+        <span>Search or Business Service</span><span>→</span><span>PostgreSQL + PostGIS</span>
+      </div>
+      <nav class="lab-nav" aria-label="Lab pages">
+        <a href="/" aria-current="page">Core search</a>
+        <a href="/advanced.html">Advanced indexes and chooser</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="panel">
+      <h2>1. Find nearby businesses</h2>
+      <p>Start with an empty catalog or load the five examples. The default point is in San Francisco.</p>
+      <div class="actions">
+        <button id="load-fixtures" type="button" class="secondary">Load examples</button>
+        <button id="reset-fixtures" type="button" class="secondary">Remove examples</button>
+        <span id="fixture-status" aria-live="polite"></span>
+      </div>
+      <details><summary>Example data API trace</summary><pre id="fixture-trace">No request yet.</pre></details>
+      <form id="search-form">
+        <div class="fields four">
+          <label>Latitude<input name="latitude" type="number" min="-90" max="90" step="any" value="37.7749" required></label>
+          <label>Longitude<input name="longitude" type="number" min="-180" max="180" step="any" value="-122.4194" required></label>
+          <label>Radius in meters<input name="radiusMeters" type="number" min="1" max="50000" value="3000" required></label>
+          <label>Page size<input name="limit" type="number" min="1" max="100" value="20" required></label>
+        </div>
+        <button id="compare" type="submit">Compare search methods</button>
+      </form>
+      <div class="variants" id="variants" aria-live="polite"></div>
+      <template id="variant-template">
+        <article class="variant">
+          <div class="variant-heading"><h3></h3><span class="badge" hidden>Interview default</span></div>
+          <p class="store"></p>
+          <p class="description"></p>
+          <p class="metrics" aria-live="polite">Ready to search</p>
+          <ul class="results"></ul>
+          <button type="button" class="secondary next" disabled>Next page</button>
+          <details><summary>Request and response</summary><pre class="trace">No request yet.</pre></details>
+        </article>
+      </template>
+    </section>
+    <section class="panel" id="profile">
+      <h2>2. Open a business profile</h2>
+      <p id="profile-result" aria-live="polite">Select a business in any search result.</p>
+      <details id="profile-details"><summary>Profile API trace</summary><pre id="profile-trace">No request yet.</pre></details>
+    </section>
+    <section class="panel">
+      <h2>3. Register a business</h2>
+      <p>The lab uses Lee's mock owner session. A new submission gets one UUID. Use the same key to retry.</p>
+      <form id="business-form">
+        <div class="fields three">
+          <label>Name<input name="name" required maxlength="160" value="Harbor Coffee"></label>
+          <label>Category<input name="category" required maxlength="80" value="cafe"></label>
+          <label>Address<input name="address" required maxlength="300" value="400 Market Street"></label>
+          <label>Latitude<input name="latitude" type="number" min="-90" max="90" step="any" value="37.779" required></label>
+          <label>Longitude<input name="longitude" type="number" min="-180" max="180" step="any" value="-122.4194" required></label>
+        </div>
+        <label class="checkbox"><input id="simulate-loss" type="checkbox"> Simulate a lost reply after commit</label>
+        <div class="actions">
+          <button type="submit">Register business</button>
+          <button id="retry" type="button" class="secondary" disabled>Retry saved submission</button>
+          <button id="new-key" type="button" class="secondary">Start a new submission</button>
+        </div>
+      </form>
+      <p class="key-line"><strong>Submission key</strong> <code id="active-key">Generated on submit</code></p>
+      <p id="business-status" aria-live="polite"></p>
+      <details id="business-details"><summary>Registration API trace</summary><pre id="business-trace">No request yet.</pre></details>
+    </section>
+    <section class="panel">
+      <h2>Inspect PostgreSQL</h2>
+      <p>Refresh to see up to 20 recent rows in each table. New rows get a highlight.</p>
+      <button id="inspect" type="button" class="secondary">Refresh tables</button>
+      <div class="fields two store-grid">
+        <article class="variant">
+          <h3>businesses</h3><p>Primary key on business ID. Spatial and Geohash indexes on location-derived data.</p>
+          <div id="catalog-rows"></div>
+        </article>
+        <article class="variant">
+          <h3>creation_requests</h3><p>Primary key on owner ID and submission UUID. Each row stores the original response.</p>
+          <div id="request-rows"></div>
+        </article>
+      </div>
+      <details><summary>Inspector API trace</summary><pre id="store-trace">No request yet.</pre></details>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,63 @@
+:root {
+  color-scheme: light;
+  font: 16px/1.5 system-ui, sans-serif;
+  color: #182f2b;
+  background: #f1f5f2;
+  --paper: #fff;
+  --border: #d7e3dc;
+  --muted: #4b645d;
+  --accent: #096451;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.wrap { width: min(1180px, 100% - 2rem); margin: auto; }
+.hero { background: #123630; color: #f2fff7; padding: 2.3rem 0 2rem; }
+.eyebrow { margin: 0; font-size: .76rem; letter-spacing: .14em; color: #a5e4ca; font-weight: 700; }
+h1 { margin: .2rem 0; font-size: clamp(2rem, 5vw, 3.3rem); line-height: 1.1; }
+h2, h3 { line-height: 1.25; margin: 0 0 .45rem; }
+p { margin: .5rem 0 .9rem; }
+main { padding: 1.5rem 0 3rem; }
+.pipeline, .actions { display: flex; flex-wrap: wrap; gap: .55rem; align-items: center; }
+.pipeline { margin-top: 1.25rem; font-size: .86rem; }
+.pipeline span:nth-child(odd) { padding: .25rem .6rem; border: 1px solid #659184; border-radius: .35rem; }
+.lab-nav { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: 1.2rem; }
+.lab-nav a { color: #ecfff4; border: 1px solid #659184; padding: .38rem .65rem; border-radius: .4rem; text-decoration: none; }
+.lab-nav a[aria-current="page"] { background: #cceedd; color: #123630; border-color: #cceedd; font-weight: 700; }
+.panel { background: var(--paper); border: 1px solid var(--border); border-radius: .85rem; padding: clamp(1rem, 3vw, 1.6rem); margin-bottom: 1.15rem; }
+.fields, .variants { display: grid; gap: .85rem; margin: .8rem 0; }
+.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.three, .variants { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+label { display: block; font-weight: 650; font-size: .9rem; }
+input:not([type="checkbox"]) { display: block; width: 100%; margin-top: .3rem; border: 1px solid #aabcb2; border-radius: .4rem; padding: .55rem .65rem; font: inherit; color: inherit; background: #fff; }
+.checkbox { display: flex; align-items: center; gap: .45rem; margin: .75rem 0; }
+button { background: var(--accent); color: white; border: 1px solid var(--accent); border-radius: .4rem; padding: .5rem .75rem; font: inherit; font-weight: 650; cursor: pointer; }
+button:hover:not(:disabled) { filter: brightness(.9); }
+button.secondary { background: #eff8f2; color: #135547; border-color: #b9d4c7; }
+button:disabled { opacity: .55; cursor: default; }
+:focus-visible { outline: 3px solid #1b826b; outline-offset: 3px; }
+.variant { min-width: 0; border: 1px solid var(--border); border-radius: .6rem; background: #f7faf8; padding: .9rem; }
+.variant-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem; }
+.badge { font-size: .7rem; font-weight: 700; color: #0a5541; background: #cceedd; padding: .15rem .35rem; border-radius: .25rem; }
+.store, .metrics, .key-line, .store-grid p { color: var(--muted); font-size: .88rem; }
+.description { min-height: 3.25em; }
+.results { list-style: none; padding: 0; margin: .6rem 0; }
+.results li { display: flex; justify-content: space-between; align-items: center; gap: .5rem; border-top: 1px solid var(--border); padding: .35rem 0; }
+.results li span { flex-shrink: 0; font-size: .85rem; }
+.result-link { background: none; border: 0; padding: .25rem 0; text-align: left; color: #096451; text-decoration: underline; overflow-wrap: anywhere; }
+details { margin-top: .7rem; font-size: .9rem; }
+summary { cursor: pointer; font-weight: 650; overflow-wrap: anywhere; }
+pre { background: #e8f0eb; border-radius: .4rem; padding: .7rem; overflow: auto; max-height: 23rem; margin: .45rem 0 0; font-size: .8rem; }
+code { overflow-wrap: anywhere; }
+.fresh { background: #def4e5; border-radius: .3rem; padding: .25rem .35rem; }
+.chooser-table { overflow-x: auto; }
+.chooser-table table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.chooser-table th, .chooser-table td { border-bottom: 1px solid var(--border); padding: .6rem; text-align: left; vertical-align: top; }
+.chooser-table thead { background: #eff8f2; }
+.chooser-table th[scope="row"] { min-width: 8rem; }
+@media (max-width: 820px) {
+  .four, .three, .variants { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .variants, .two, .three { grid-template-columns: 1fr; }
+}

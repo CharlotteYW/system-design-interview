@@ -1,38 +1,65 @@
-# Local stack skeleton. Uncomment and fill when implementing this question.
-# Default study stack: Python/FastAPI app + Postgres + Redis.
-# Add Kafka, MinIO, etc. only when the design needs them.
+name: proximity-service
+
+x-api: &api
+  image: proximity-study-api:local
+  depends_on:
+    postgres:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"]
+    interval: 3s
+    timeout: 3s
+    retries: 15
 
 services:
-  app:
-    build: .
+  gateway:
+    image: nginx:1.28-alpine
     ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://app:app@postgres:5432/app
-      REDIS_URL: redis://redis:6379/0
+      - "127.0.0.1:8430:80"
+    volumes:
+      - ./gateway.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./src/static:/usr/share/nginx/html:ro
     depends_on:
-      postgres:
+      business:
         condition: service_healthy
-      redis:
-        condition: service_started
-    # profiles: ["not-implemented"]
+      search:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  business:
+    <<: *api
+    build: .
+    environment:
+      SERVICE_ROLE: business
+      DATABASE_URL: postgresql://app:app@postgres:5432/proximity
+
+  search:
+    <<: *api
+    build: .
+    environment:
+      SERVICE_ROLE: search
+      DATABASE_URL: postgresql://proximity_search:search@postgres:5432/proximity
+      CURSOR_SECRET: proximity-local-demo-cursor-key
 
   postgres:
-    image: postgres:16-alpine
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
-      POSTGRES_DB: app
+      POSTGRES_DB: proximity
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    # profiles: ["not-implemented"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U app -d proximity"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7-alpine
-    # profiles: ["not-implemented"]
-
-# volumes:
-#   pgdata:
+volumes:
+  pgdata:

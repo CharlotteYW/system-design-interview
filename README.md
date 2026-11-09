@@ -94,12 +94,12 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 | 9 | [YouTube](questions/youtube/) | A large upload, transcode, and a CDN | Implemented |
 | 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | Implemented |
 | 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | Implemented |
+| 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Implemented |
 
 ### Next
 
 | # | Question | The new idea | Why it is here | Status |
 | --- | --- | --- | --- | --- |
-| 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Volume 2 starts here. Uber needs this index | Stub |
 | 13 | [Nearby friends](questions/nearby-friends/) | Location plus a friend list | Adds the follow graph from the news feed | Stub |
 | 14 | [Uber](questions/uber/) | Match one rider to one driver | The trip is new. The location index already exists | Stub |
 | 15 | [Yelp](questions/yelp/) | Search places by area and by word | The geo index plus autocomplete | Stub |
@@ -212,7 +212,7 @@ Ch 1–3 are foundations (scale, estimation, framework) — see [foundations](fo
 
 | Chapter | Question | Status |
 | --- | --- | --- |
-| 1 | Proximity service | [Stub](questions/proximity-service/). Uber reuses this index |
+| 1 | Proximity service | [Implemented](questions/proximity-service/). Uber reuses this index |
 | 2 | Nearby friends | [Stub](questions/nearby-friends/) |
 | 3 | Google Maps | [Stub](questions/google-maps/) |
 | 4 | Distributed message queue | [Stub](questions/distributed-message-queue/) |

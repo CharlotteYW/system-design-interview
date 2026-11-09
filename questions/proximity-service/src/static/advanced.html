@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advanced Spatial Indexes · Proximity Lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body data-page="advanced">
+  <header class="hero">
+    <div class="wrap">
+      <p class="eyebrow">SYSTEM DESIGN STUDY LAB</p>
+      <h1>Advanced spatial indexes</h1>
+      <p>Run one radius search with five methods. See which storage and index work each method adds.</p>
+      <nav class="lab-nav" aria-label="Lab pages">
+        <a href="/">Core search</a>
+        <a href="/advanced.html" aria-current="page">Advanced indexes and chooser</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="panel">
+      <h2>Run the same search</h2>
+      <p>Use the shared catalog or load the five examples. Each method checks geographic distance before it returns matches.</p>
+      <div class="actions">
+        <button id="load-fixtures" type="button" class="secondary">Load examples</button>
+        <button id="reset-fixtures" type="button" class="secondary">Remove examples</button>
+        <span id="fixture-status" aria-live="polite"></span>
+      </div>
+      <details><summary>Example data API trace</summary><pre id="fixture-trace">No request yet.</pre></details>
+      <form id="search-form">
+        <div class="fields four">
+          <label>Latitude<input name="latitude" type="number" min="-90" max="90" step="any" value="37.7749" required></label>
+          <label>Longitude<input name="longitude" type="number" min="-180" max="180" step="any" value="-122.4194" required></label>
+          <label>Radius in meters<input name="radiusMeters" type="number" min="1" max="50000" value="3000" required></label>
+          <label>Page size<input name="limit" type="number" min="1" max="100" value="20" required></label>
+        </div>
+        <button id="compare" type="submit">Compare advanced methods</button>
+      </form>
+      <p>The teaching trees load up to 5,000 points and build in memory on each request. Their elapsed times include that work.</p>
+      <div class="variants" id="variants" aria-live="polite"></div>
+      <template id="variant-template">
+        <article class="variant">
+          <div class="variant-heading"><h3></h3><span class="badge" hidden>Interview default</span></div>
+          <p class="store"></p>
+          <p class="description"></p>
+          <p class="metrics" aria-live="polite">Ready to search</p>
+          <ul class="results"></ul>
+          <button type="button" class="secondary next" disabled>Next page</button>
+          <details><summary>Request, response, and index details</summary><pre class="trace">No request yet.</pre></details>
+        </article>
+      </template>
+    </section>
+
+    <section class="panel" id="profile">
+      <h2>Business profile</h2>
+      <p id="profile-result" aria-live="polite">Select a business in any search result.</p>
+      <details id="profile-details"><summary>Profile API trace</summary><pre id="profile-trace">No request yet.</pre></details>
+    </section>
+
+    <section class="panel">
+      <h2>See the extra lookup table</h2>
+      <p>In this demo, <code>business_cell_keys</code> stores one S2 key and one H3 key per business. Both point to the original <code>businesses</code> row. Business Service saves the keys with the business in the same transaction.</p>
+      <p>The primary key is <code>(method, cell_id, business_id)</code>. The inspector shows up to 20 keys per method. The in-memory trees use the catalog points directly. A separate production search store could add an outbox and a worker to keep its copy current.</p>
+      <button id="inspect-cells" type="button" class="secondary">Refresh cell keys</button>
+      <p id="cell-status" aria-live="polite"></p>
+      <div class="fields two store-grid">
+        <article class="variant"><h3>S2 keys</h3><p>Stored at level 13. The query can look up a range of these IDs.</p><div id="s2-rows"></div></article>
+        <article class="variant"><h3>H3 keys</h3><p>Stored at resolution 7. The query looks up overlapping cell IDs.</p><div id="h3-rows"></div></article>
+      </div>
+      <details><summary>Cell table API trace</summary><pre id="cell-trace">No request yet.</pre></details>
+    </section>
+
+    <section class="panel">
+      <h2>Which method should I choose?</h2>
+      <p>Start with the query you need and the store you already operate. Compare the costs on your geographic data.</p>
+      <div class="chooser-table">
+        <table>
+          <thead><tr><th scope="col">Method</th><th scope="col">Useful when</th><th scope="col">What you maintain</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Full scan</th><td>You have a small fixture or need a reference result.</td><td>Business rows. Each search checks every point.</td></tr>
+            <tr><th scope="row">PostGIS / R-tree family</th><td>You need radius queries and profiles in a relational catalog. This is our interview default.</td><td>PostGIS and a GiST index on location. PostgreSQL maintains it on writes.</td></tr>
+            <tr><th scope="row">Geohash</th><td>You want rectangular cell keys in a store with ordinary key lookups.</td><td>A generated key and B-tree in this lab. Search covers adjacent cells and checks distance.</td></tr>
+            <tr><th scope="row">Quadtree</th><td>Regional point searches benefit from smaller subdivisions where points cluster.</td><td>A tree, a leaf target, and a depth limit. A production service would maintain or rebuild the tree across requests.</td></tr>
+            <tr><th scope="row">k-d tree</th><td>You have a mostly static point set and need coordinate range or nearest-point lookups.</td><td>A tree that splits one coordinate at a time. Updates need a rebuild or balance policy.</td></tr>
+            <tr><th scope="row">BKD</th><td>You already use a search engine such as Lucene for text and geographic filters.</td><td>Search index segments, refresh and merge work, and a way to copy catalog changes. Design comparison.</td></tr>
+            <tr><th scope="row">Google S2</th><td>You want spherical region covers and the option to read descendant ID ranges.</td><td>S2 cell IDs and ordered lookups. The lab stores them in the shared lookup table.</td></tr>
+            <tr><th scope="row">H3</th><td>You need neighbor relationships or want to count points by geographic cell.</td><td>H3 cell IDs and overlap rules. For a radius query, check actual distance after cell lookup.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
