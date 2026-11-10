@@ -2,13 +2,13 @@
 
 Read this first in any new chat, in any tool (Cursor, Codex, Claude Code). It says where the study is, how a session runs, and what the learner expects. The binding rules are in `.cursor/rules/` (read every file, `00-` to `21-`). This file does not replace them.
 
-Last updated: 2026-11-08.
+Last updated: 2026-11-09.
 
 ## Where the study is
 
 | Area | Done | Not started |
 | --- | --- | --- |
-| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete, google-drive, proximity-service | Every other name in the root README learning path is a stub. Next: `nearby-friends` |
+| Questions (`questions/`) | url-shortener, rate-limiter, unique-id-generator, key-value-store, notification-system, news-feed, chat-system, youtube, one-time-password, web-crawler, search-autocomplete, google-drive, proximity-service, yelp | Every other name in the root README learning path is a stub. Next: `nearby-friends` |
 | Core concepts (`core-concepts/`) | api-design, caching, cap-theorem, consistent-hashing, data-modeling, database-indexing, networking-essentials, sharding, numbers-to-know (notes only) | none |
 | Key technologies (`key-technologies/`) | none | all 11 are stubs |
 | Patterns (`patterns/`) | 8 Hello Interview patterns, each question mapped to one primary | none |
@@ -106,6 +106,14 @@ Setup, eight integration scenarios, and three functional tests passed. Browser v
 
 Next in the learning path is Nearby Friends. Start with the requirements prompt. The change from Proximity Service is that user locations move and visibility depends on friendship and sharing settings.
 
-## Active session — Nearby Friends, 2026-11-08
+## Paused session — Nearby Friends, 2026-11-08
 
 Step 1 prompt is recorded in the question README and FAQ. The learner will define functional requirements, quality targets, and exclusions. Proximity Service is closed and pushed. No Nearby Friends architecture or lab has been selected.
+
+## Most recent completed session — Yelp, 2026-11-09
+
+All five interview steps are complete. The learner chose queued review submission for the lab and identified direct writes as the simpler production starting point if measured peak traffic permits. Direct writes use atomic SQL increments. The lab compares direct and queued writes, optional batch ratings, radius and boundary search, precomputed membership, word and substring search, and a process-local cache. The design comparison and final flow are in the question folder.
+
+Five integration scenarios and four functional checks passed. Browser checks covered search variants and the business profile with reviews. The README and FAQ record where to find all eight tables. The stop script removed the containers and preserved the data volume. Restart with `questions/yelp/scripts/setup.sh` and open http://127.0.0.1:8440/.
+
+Resume Nearby Friends at step 1. The requirements prompt is already in the question README.

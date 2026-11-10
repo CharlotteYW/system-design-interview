@@ -95,6 +95,7 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 | 10 | [Search autocomplete](questions/search-autocomplete/) | A prefix tree and the top suggestions | Implemented |
 | 11 | [Google Drive](questions/google-drive/) | Sync, chunks, and conflicts | Implemented |
 | 12 | [Proximity service](questions/proximity-service/) | Find points near a point | Implemented |
+| 15 | [Yelp](questions/yelp/) | Search places by area and by word, then read and submit reviews | Implemented |
 
 ### Next
 
@@ -102,7 +103,6 @@ Two names that are the same design share one folder. Dropbox is Google Drive. Th
 | --- | --- | --- | --- | --- |
 | 13 | [Nearby friends](questions/nearby-friends/) | Location plus a friend list | Adds the follow graph from the news feed | Stub |
 | 14 | [Uber](questions/uber/) | Match one rider to one driver | The trip is new. The location index already exists | Stub |
-| 15 | [Yelp](questions/yelp/) | Search places by area and by word | The geo index plus autocomplete | Stub |
 | 16 | [Tinder](questions/tinder/) | Two people must both agree | A smaller match than a trip | Stub |
 | 17 | [Google Maps](questions/google-maps/) | Map tiles and a route | Heavier than "find nearby" | Stub |
 | 18 | [Local delivery](questions/local-delivery/) | Assign one delivery to one driver | Maps plus the Uber assignment | Stub |
@@ -156,7 +156,7 @@ Overlapping names share **one** folder. Every name below has a folder. Prompt th
 | --- | --- | --- | --- |
 | Bitly | Easy | [Implemented](questions/url-shortener/) | Same as URL shortener |
 | Dropbox | Easy | [Implemented](questions/google-drive/) | Same question as Google Drive (Vol 1 Ch 15) |
-| Yelp | Easy | [Stub](questions/yelp/) | Related to Proximity Service (Vol 2) |
+| Yelp | Easy | [Implemented](questions/yelp/) | Related to Proximity Service (Vol 2) |
 | Local Delivery Service | Easy | [Stub](questions/local-delivery/) | |
 | Ticketmaster | Medium | [Stub](questions/ticketmaster/) | |
 | Instagram | Medium | [Stub](questions/instagram/) | Same home-feed shape as news feed. The extra work is large photos and videos, and a much higher post rate. |

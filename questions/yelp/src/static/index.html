@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yelp study lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">System design lab</p>
+    <h1>Yelp</h1>
+    <p>Find local businesses, compare search paths, and follow a review from acceptance to publication.</p>
+  </header>
+  <section>
+    <h2>Search the catalog</h2>
+    <div class="controls">
+      <label>Place name <input id="place-name" value="San Francisco" maxlength="100"></label>
+      <button id="find-place">Find place</button>
+      <label>Place <select id="place"><option value="sf-ca">San Francisco, California</option></select></label>
+      <label>Business name <input id="name" value="ramen" maxlength="100"></label>
+      <label>Category <select id="category"><option value="restaurant">Restaurant</option><option value="">Any</option><option value="bookstore">Bookstore</option></select></label>
+      <label>Text match <select id="name-mode"><option value="contains">Name contains</option><option value="words">Whole terms</option></select></label>
+      <label>Search cache <select id="cache-mode"><option value="off">Off</option><option value="shared">On</option></select></label>
+      <label>Radius in meters <input id="radius" type="number" min="1" max="50000" value="3000"></label>
+    </div>
+    <p id="place-status" role="status"></p>
+    <div class="columns search-columns">
+      <article><h3>City boundary</h3><p>Check the polygon in PostGIS. Interview default for named places.</p><button data-search="boundary">Search boundary</button><div id="boundary-results" class="results" aria-live="polite"></div></article>
+      <article><h3>Precomputed membership</h3><p>Look up the businesses assigned to the same place.</p><button data-search="membership">Search memberships</button><div id="membership-results" class="results" aria-live="polite"></div></article>
+      <article><h3>Radius</h3><p>Draw a circle around the selected place center.</p><button data-search="radius">Search radius</button><div id="radius-results" class="results" aria-live="polite"></div></article>
+    </div>
+  </section>
+  <section>
+    <h2>Business and reviews</h2>
+    <div class="controls">
+      <label>Business ID <input id="business-id" value="sunny-ramen"></label>
+      <button id="open-business">Open business</button>
+      <label>Demo author <select id="user"><option value="lee">Lee</option><option value="kim">Kim</option><option value="ada">Ada</option></select></label>
+      <button id="my-reviews">My reviews</button>
+    </div>
+    <div class="columns">
+      <article><h3 id="profile">Business profile</h3><div id="public-reviews" class="results" aria-live="polite"></div></article>
+      <article><h3>My reviews</h3><div id="own-reviews" class="results" aria-live="polite"></div></article>
+    </div>
+    <div class="controls review-form">
+      <label>Rating <select id="rating"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select></label>
+      <label>Review text <input id="review-text" maxlength="2000" placeholder="Optional"></label>
+      <label class="checkbox"><input id="batch-rating" type="checkbox"> Batch the queued rating update</label>
+    </div>
+    <div class="columns">
+      <article><h3>Queue and publish</h3><p>Get an acceptance receipt and follow it until the worker finishes. Lab default.</p><button data-submit="queued">Queue review</button><p id="queued-status" role="status"></p></article>
+      <article><h3>Save directly</h3><p>Wait for the review and rating totals to commit in the request.</p><button data-submit="direct">Save review now</button><p id="direct-status" role="status"></p></article>
+    </div>
+  </section>
+  <section>
+    <h2>Request inspector</h2>
+    <p>Each action shows its HTTP request, response, and the store used.</p>
+    <div id="http-log" aria-live="polite"></div>
+  </section>
+</main>
+</body>
+</html>
