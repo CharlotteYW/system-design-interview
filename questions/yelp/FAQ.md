@@ -204,6 +204,19 @@ A: Start by routing each business and its reviews, submission jobs, and rating t
 
 A: The [README data model](README.md#data-model) lists all eight tables, their key fields, and their purpose. It includes `business_places` for precomputed place membership and `rating_outbox` for batched rating updates. The [SQL schema](src/schema.sql) has the exact types, constraints, and indexes.
 
+**Q: What is `rating_outbox` for?**
+
+A: It holds ratings that still need to be added to the business's rating summary. In batch mode, the worker saves the review and its outbox row in the same transaction. The review is visible as soon as that transaction commits. Later, the worker groups unapplied rows by business. If Sunny Ramen gets a 5-star review and a 3-star review, the worker adds 8 to `rating_sum` and 2 to `review_count` in one update. It sets `applied_at` on both rows in the same transaction. If the worker crashes before commit, the totals stay as they were and the rows are still pending. After commit, the next run skips them.
+
+Batch mode reduces writes to the same summary row when many reviews arrive for one business. The displayed average can briefly lag behind the review list. In direct mode, the review and summary update commit together.
+
+**Q: Does the same worker read both `review_submissions` and `rating_outbox`?**
+
+A: Yes. The Yelp lab worker does two jobs in separate transactions.
+
+1. It reads a pending `review_submissions` row, saves the review, and marks the submission saved. The author can check that status. If the submission uses batch mode, the worker also writes a `rating_outbox` row in that transaction.
+2. On its batch timer, it reads unapplied `rating_outbox` rows, adds their stars and counts to `business_rating_stats`, and marks those rows as applied. This job changes the business's rating summary after the reviews are already visible.
+
 ## Local system
 
 **Q: What did the simplified implementation teach you that the diagram did not?**  

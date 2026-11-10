@@ -433,7 +433,7 @@ The five interview steps are complete. The lab implements the starting flows and
 - **Limits:** The seeded polygons are illustrative. The lab uses a demo user header, an in-memory cache, and one PostgreSQL instance. Elasticsearch, sharding, and real failover remain interview comparisons.
 - **How to run:** From this folder, run `./scripts/setup.sh` and open [the Yelp lab](http://127.0.0.1:8440/). Run `./scripts/run-scenarios.sh` and `./scripts/run-functional.sh`. Stop with `./scripts/stop.sh`. Data stays in the named volume.
 - **Tests:** Five integration scenarios and four functional checks passed. The browser check covered polygon, membership, and radius search, plus the profile and review list.
-- **Session questions:** The [FAQ](FAQ.md#session-questions) explains where to find the purpose and fields of all eight lab tables. The [data model](#data-model) lists them together.
+- **Session questions:** The [FAQ](FAQ.md#session-questions) explains how the worker uses `review_submissions` to save reviews and `rating_outbox` to batch rating updates and recover from a crash. The [data model](#data-model) lists the purpose and fields of all eight tables.
 
 ## Interview checklist
 
